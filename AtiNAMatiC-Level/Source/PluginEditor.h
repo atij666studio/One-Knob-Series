@@ -19,6 +19,7 @@ private:
 
     NAMLevelProcessor& proc;
     na::LevelLNF       lnf;
+    juce::Image        background;
 
     na::AboutOverlay aboutOverlay;
     na::TitleBadge   titleBadge;
