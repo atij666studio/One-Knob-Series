@@ -61,8 +61,12 @@ namespace na
             envIn         = 0.0f;
             envOut        = 0.0f;
             smoothedGain  = 1.0f;
-            lastMacro     = -1.0f;
-            lastAuto      = -1;
+
+            // Auto on/off is a hard boolean checked once per block; ramp the
+            // manual<->auto-corrected gain blend over ~30 ms instead of
+            // switching instantly, or toggling Auto pops at the block boundary.
+            autoBlend     = 1.0f;
+            autoBlendCoef = (float) (1.0 - std::exp (-1.0 / (0.030 * sr)));
         }
 
         void process (juce::AudioBuffer<float>& buffer,
@@ -124,9 +128,12 @@ namespace na
 
             float pkIn = 0.0f, pkOut = 0.0f;
             float lastAppliedDb = juce::Decibels::gainToDecibels (smoothedGain, -60.0f);
+            const float autoTarget = autoOn ? 1.0f : 0.0f;
 
             for (int i = 0; i < n; ++i)
             {
+                autoBlend += (autoTarget - autoBlend) * autoBlendCoef;
+
                 // --- Mono-sum sample for RMS measurement ----------------
                 float mono = 0.0f;
                 for (int c = 0; c < chClamp; ++c) mono += writePtrs[c][i];
@@ -163,8 +170,10 @@ namespace na
                 smoothedGain += (targetGain - smoothedGain) * a;
 
                 // --- Apply ----------------------------------------------
-                const float applyGain = autoOn ? smoothedGain * trimGain
-                                               : trimGain;
+                // Blend smoothly between unity (manual/trim-only) and the
+                // full auto-corrected gain so toggling Auto doesn't pop.
+                const float autoGainNow = 1.0f + autoBlend * (smoothedGain - 1.0f);
+                const float applyGain   = autoGainNow * trimGain;
 
                 for (int c = 0; c < chClamp; ++c)
                 {
@@ -196,11 +205,8 @@ namespace na
 
             inputDb.store  (juce::Decibels::gainToDecibels (envIn,  -90.0f), std::memory_order_relaxed);
             outputDb.store (juce::Decibels::gainToDecibels (envOut, -90.0f), std::memory_order_relaxed);
-            gainDb.store   (autoOn ? lastAppliedDb : 0.0f,                   std::memory_order_relaxed);
-            grAmount.store (autoOn ? grNorm        : 0.0f,                   std::memory_order_relaxed);
-
-            lastMacro = macroClamped;
-            lastAuto  = autoOn ? 1 : 0;
+            gainDb.store   (lastAppliedDb * autoBlend, std::memory_order_relaxed);
+            grAmount.store (grNorm        * autoBlend, std::memory_order_relaxed);
         }
 
     private:
@@ -215,7 +221,9 @@ namespace na
         float envIn        { 0.0f };
         float envOut       { 0.0f };
         float smoothedGain { 1.0f };
-        float lastMacro    { -1.0f };
-        int   lastAuto     { -1 };
+
+        // Smoothed 0..1 blend toward the Auto on/off target (see process()).
+        float autoBlend     { 1.0f };
+        float autoBlendCoef { 0.0f };
     };
 }
