@@ -19,6 +19,7 @@ private:
 
     NAMFeelProcessor& proc;
     nf::FeelLNF       lnf;
+    juce::Image       background;
 
     nf::TitleBadge   titleBadge;
     nf::AboutOverlay aboutOverlay;
