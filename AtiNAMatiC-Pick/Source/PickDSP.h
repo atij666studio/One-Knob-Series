@@ -58,8 +58,6 @@ namespace np
             // Tilt EQ — start neutral. Coefficients shared, updated in
             // place; each per-channel filter holds a ref-counted pointer
             // and copies values from the shared object on prepare.
-            const auto neutral = juce::dsp::IIR::Coefficients<float>::makePeakFilter (
-                                     sr, 1000.0f, 0.7f, 1.0f);
             highShelfCoefs = juce::dsp::IIR::Coefficients<float>::makeHighShelf (
                                  sr, 4000.0f, 0.7f, 1.0f);
             lowShelfCoefs  = juce::dsp::IIR::Coefficients<float>::makeLowShelf (
@@ -77,6 +75,12 @@ namespace np
             envOutDisp = 0.0f;
             transientShown = 0.0f;
             currentAttack = 1.0e9f; // force first update
+
+            // Per-sample smoothing of the bipolar attack value feeding the
+            // gain-shaping term -- a fast knob move (especially crossing
+            // through neutral) would otherwise step/click every block.
+            smA = 0.0f;
+            smACoef = oneOverTau (15.0, sr);
         }
 
         // attack: 0..1, mapped to -1..+1
@@ -154,7 +158,8 @@ namespace np
                 if (T > transPk) transPk = T;
                 transAcc += T;
 
-                const float g = 1.0f + A * kStrength * T;
+                smA += (A - smA) * smACoef;
+                const float g = 1.0f + smA * kStrength * T;
 
                 for (int c = 0; c < chClamp; ++c)
                 {
@@ -240,6 +245,10 @@ namespace np
         std::array<juce::dsp::IIR::Filter<float>, 8> lowShelf;
 
         float currentAttack { 1.0e9f };
+
+        // Per-sample smoothed bipolar attack value (drives gain shaping).
+        float smA     { 0.0f };
+        float smACoef { 0.0f };
 
         float envInDisp     { 0.0f };
         float envOutDisp    { 0.0f };
