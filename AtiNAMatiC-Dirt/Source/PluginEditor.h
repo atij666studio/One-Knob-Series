@@ -19,6 +19,7 @@ private:
 
     NAMDirtProcessor& proc;
     nd::DirtLNF       lnf;
+    juce::Image       background;
 
     nd::AboutOverlay aboutOverlay;
     nd::TitleBadge   titleBadge;
