@@ -215,8 +215,9 @@ void AtiNAMatiCHitZoneEditor::resized()
 
     r.removeFromTop (8);
 
-    // Bottom controls row
-    auto bottom = r.removeFromTop (110).reduced (16, 4);
+    // Bottom controls row -- pulled in from the edges so Mix/Output don't
+    // sit on top of the baseplate's corner circuit-trace decoration.
+    auto bottom = r.removeFromTop (110).reduced (64, 4);
     const int colW = bottom.getWidth() / 3;
     auto col1 = bottom.removeFromLeft (colW);
     auto col2 = bottom.removeFromLeft (colW);
