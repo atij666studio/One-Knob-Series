@@ -68,13 +68,25 @@ namespace nb
                 modeF[c].coefficients   = modeCoefs;
             }
 
+            smBoost = 0.0f;
             updateClarity (0.0f);
-            updateModeShelf (Balanced);
+
+            // Snap the mode shelf to its true target on prepare (no need to
+            // ramp in from silence), then every later switch crossfades.
+            *modeCoefs = *targetModeCoeffs (Balanced);
 
             envIn  = 0.0f;
             envOut = 0.0f;
             spark  = 0.0f;
-            currentMode = -1;
+
+            // ~25 ms block-rate smoothing for the BOOST macro and for
+            // crossfading the mode-shelf's raw biquad coefficients on switch.
+            smCoef = std::exp (-float (juce::jmax (blockSize, 32)) / float (0.025 * sr));
+
+            outGainSm.reset (sr, 0.02);
+            mixSm.reset (sr, 0.02);
+            outGainSm.setCurrentAndTargetValue (1.0f);
+            mixSm.setCurrentAndTargetValue (1.0f);
         }
 
         void process (juce::AudioBuffer<float>& buffer,
@@ -84,9 +96,13 @@ namespace nb
             const int n     = buffer.getNumSamples();
             if (numCh <= 0 || n <= 0) return;
 
+            // Smooth the BOOST macro at block rate so drive/shape/bias and the
+            // clarity shelf don't snap on a fast knob move/automation.
+            smBoost = smCoef * smBoost + (1.0f - smCoef) * boost;
+
             // --- Macro mapping -------------------------------------------
             // boost 0..1 controls everything together.
-            const float driveDb = boost * 18.0f;                  // pre-sat gain
+            const float driveDb = smBoost * 18.0f;                // pre-sat gain
             const float drive   = juce::Decibels::decibelsToGain (driveDb);
             // Effective shaping amount for the saturator (>= 1.0). We tanh on
             // (drive * x) and then renormalise so output peak stays ~1.0.
@@ -95,31 +111,26 @@ namespace nb
             const float invTanh = 1.0f / std::tanh (shape);
             // 2nd-harmonic bias — adds a tiny asymmetry so we get even-order
             // content (warm, "tube-ish"). Stays subtle.
-            const float bias    = boost * 0.07f;
+            const float bias    = smBoost * 0.07f;
 
             // Auto make-up so loudness is preserved across the BOOST sweep.
             // Empirically the tanh stage adds roughly +driveDb of crest before
             // re-normalisation; we trim back almost all of it.
             const float autoMakeupDb = -driveDb * 0.85f;
-            const float outGain = juce::Decibels::decibelsToGain (autoMakeupDb + outGainDb);
+            outGainSm.setTargetValue (juce::Decibels::decibelsToGain (autoMakeupDb + outGainDb));
+            mixSm.setTargetValue (mix);
 
-            // Update tone shapers if mode changed, and clarity shelf if BOOST
-            // changed enough to matter (cheap: do it every block).
-            if (mode != currentMode)
-            {
-                updateModeShelf ((Mode) mode);
-                currentMode = mode;
-            }
-            updateClarity (boost);
+            // Crossfade the mode shelf's raw biquad coefficients toward the
+            // selected mode every block, rather than snapping the instant the
+            // mode changes -- avoids a hard filter-state jump on switch.
+            updateModeShelf ((Mode) mode);
+            updateClarity (smBoost);
 
             // --- Render --------------------------------------------------
             const int chClamp = juce::jmin (numCh, 8);
             float* writePtrs[8] = { nullptr };
             for (int c = 0; c < chClamp; ++c)
                 writePtrs[c] = buffer.getWritePointer (c);
-
-            const float dryMul = 1.0f - mix;
-            const float wetMul = mix;
 
             // Per-block envelope smoothing coeffs.
             const float envA = (float) (1.0 - std::exp (-1.0 / (0.020 * sampleRate)));
@@ -128,6 +139,9 @@ namespace nb
 
             for (int i = 0; i < n; ++i)
             {
+                const float outGainNow = outGainSm.getNextValue();
+                const float mixNow     = mixSm.getNextValue();
+
                 for (int c = 0; c < chClamp; ++c)
                 {
                     const float xRaw = writePtrs[c][i];
@@ -147,8 +161,8 @@ namespace nb
                     const float shaped = modeF[c].processSample (clarity[c].processSample (sat));
 
                     // 5) output trim + dry/wet
-                    const float wet = shaped * outGain;
-                    const float y   = wet * wetMul + xRaw * dryMul;
+                    const float wet = shaped * outGainNow;
+                    const float y   = wet * mixNow + xRaw * (1.0f - mixNow);
 
                     writePtrs[c][i] = y;
 
@@ -170,7 +184,7 @@ namespace nb
 
             envIn  += (pkIn  - envIn)  * envA;
             envOut += (pkOut - envOut) * envA;
-            spark  += (juce::jmin (1.0f, sparkAcc / juce::jmax (1, n) * (1.0f + boost * 4.0f)) - spark) * envA;
+            spark  += (juce::jmin (1.0f, sparkAcc / juce::jmax (1, n) * (1.0f + smBoost * 4.0f)) - spark) * envA;
 
             inputDb.store     (juce::Decibels::gainToDecibels (envIn,  -90.0f), std::memory_order_relaxed);
             outputDb.store    (juce::Decibels::gainToDecibels (envOut, -90.0f), std::memory_order_relaxed);
@@ -187,28 +201,39 @@ namespace nb
                 juce::Decibels::decibelsToGain (gainDb));
         }
 
-        void updateModeShelf (Mode m)
+        juce::ReferenceCountedObjectPtr<juce::dsp::IIR::Coefficients<float>>
+            targetModeCoeffs (Mode m)
         {
-            juce::ReferenceCountedObjectPtr<juce::dsp::IIR::Coefficients<float>> c;
             switch (m)
             {
                 case Bright:
-                    c = juce::dsp::IIR::Coefficients<float>::makeHighShelf (
+                    return juce::dsp::IIR::Coefficients<float>::makeHighShelf (
                             sampleRate, 6000.0f, 0.7f,
                             juce::Decibels::decibelsToGain (3.0f));
-                    break;
                 case Thick:
-                    c = juce::dsp::IIR::Coefficients<float>::makeLowShelf (
+                    return juce::dsp::IIR::Coefficients<float>::makeLowShelf (
                             sampleRate, 220.0f, 0.7f,
                             juce::Decibels::decibelsToGain (3.0f));
-                    break;
                 case Balanced:
                 default:
-                    c = juce::dsp::IIR::Coefficients<float>::makePeakFilter (
+                    return juce::dsp::IIR::Coefficients<float>::makePeakFilter (
                             sampleRate, 1000.0f, 0.7f, 1.0f);
-                    break;
             }
-            *modeCoefs = *c;
+        }
+
+        // Bright/Thick/Balanced are qualitatively different filter shapes
+        // (high-shelf / low-shelf / unity peak), so we can't interpolate their
+        // freq/gain parameters like a same-shape sweep. Instead, crossfade the
+        // raw biquad coefficients toward the new mode's target every block --
+        // cheap, and avoids the instant filter-state jump on switch.
+        void updateModeShelf (Mode m)
+        {
+            auto target = targetModeCoeffs (m);
+            auto& cur = modeCoefs->coefficients;
+            auto& tgt = target->coefficients;
+            const int num = juce::jmin (cur.size(), tgt.size());
+            for (int i = 0; i < num; ++i)
+                cur.getReference (i) = smCoef * cur[i] + (1.0f - smCoef) * tgt[i];
         }
 
         double sampleRate { 48000.0 };
@@ -222,7 +247,11 @@ namespace nb
         std::array<juce::dsp::IIR::Filter<float>, 8> clarity;
         std::array<juce::dsp::IIR::Filter<float>, 8> modeF;
 
-        int   currentMode { -1 };
+        // Block-rate smoothed BOOST macro + mode-shelf crossfade coefficient,
+        // and per-sample output/mix ramps.
+        float smBoost { 0.0f };
+        float smCoef  { 0.0f };
+        juce::SmoothedValue<float> outGainSm, mixSm;
 
         float envIn   { 0.0f };
         float envOut  { 0.0f };
