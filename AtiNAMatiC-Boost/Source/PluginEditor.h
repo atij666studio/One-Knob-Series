@@ -19,6 +19,7 @@ private:
 
     NAMBoostProcessor& proc;
     nb::BoostLNF       lnf;
+    juce::Image        background;
 
     nb::TitleBadge   titleBadge;
     nb::AboutOverlay aboutOverlay;

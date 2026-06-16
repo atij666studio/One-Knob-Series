@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include <BinaryData.h>
 
 namespace
 {
@@ -9,6 +10,8 @@ namespace
 NAMBoostEditor::NAMBoostEditor (NAMBoostProcessor& p)
     : juce::AudioProcessorEditor (&p), proc (p)
 {
+    background = juce::ImageCache::getFromMemory (BinaryData::Background_png, BinaryData::Background_pngSize);
+
     setLookAndFeel (&lnf);
     setSize (kWidth, kHeight);
 
@@ -109,28 +112,27 @@ NAMBoostEditor::~NAMBoostEditor()
 
 void NAMBoostEditor::paint (juce::Graphics& g)
 {
-    juce::ColourGradient bg (nb::col::bg1, (float) getWidth() * 0.5f, 0.0f,
-                             nb::col::bg0, (float) getWidth() * 0.5f, (float) getHeight(), false);
-    g.setGradientFill (bg);
-    g.fillAll();
+    if (background.isValid())
+    {
+        g.drawImage (background, getLocalBounds().toFloat());
+    }
+    else
+    {
+        juce::ColourGradient bg (nb::col::bg1, (float) getWidth() * 0.5f, 0.0f,
+                                 nb::col::bg0, (float) getWidth() * 0.5f, (float) getHeight(), false);
+        g.setGradientFill (bg);
+        g.fillAll();
+    }
 
-    auto topH = 56;
-    g.setColour (nb::col::panel);
-    g.fillRect (juce::Rectangle<int> (0, 0, getWidth(), topH));
-    g.setColour (nb::col::accent);
-    g.fillRect (0, topH - 1, getWidth(), 1);
-    g.setColour (juce::Colours::black.withAlpha (0.3f));
-    g.fillRect (0, topH, getWidth(), 1);
-
+    const auto topH = 56;
     g.setColour (nb::col::accent);
     g.fillRect (16, 14, 3, topH - 28);
+    g.setColour (nb::col::accent.withAlpha (0.35f));
+    g.fillRect (0, topH - 1, getWidth(), 1);
 
     const int botH = 124;
-    auto footer = juce::Rectangle<int> (0, getHeight() - botH, getWidth(), botH);
-    g.setColour (nb::col::panel);
-    g.fillRect (footer);
-    g.setColour (nb::col::panelEdge);
-    g.fillRect (footer.getX(), footer.getY(), footer.getWidth(), 1);
+    g.setColour (nb::col::panelEdge.withAlpha (0.5f));
+    g.fillRect (0, getHeight() - botH, getWidth(), 1);
 }
 
 void NAMBoostEditor::resized()

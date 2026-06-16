@@ -71,6 +71,10 @@ juce_add_plugin(AtiNAMatiCBoost
 
 juce_generate_juce_header(AtiNAMatiCBoost)
 
+juce_add_binary_data(AtiNAMatiCBoostData SOURCES
+    Resources/Background.png
+)
+
 target_sources(AtiNAMatiCBoost PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginProcessor.h
@@ -95,6 +99,7 @@ clap_juce_extensions_plugin(
 )
 
 target_link_libraries(AtiNAMatiCBoost PRIVATE
+    AtiNAMatiCBoostData
     clap_juce_extensions
     juce::juce_audio_utils
     juce::juce_audio_processors
