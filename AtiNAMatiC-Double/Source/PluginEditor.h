@@ -19,6 +19,7 @@ private:
 
     NAMDoubleProcessor& proc;
     nd::DoubleLNF       lnf;
+    juce::Image         background;
 
     nd::TitleBadge   titleBadge;
     nd::AboutOverlay aboutOverlay;

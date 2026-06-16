@@ -57,101 +57,152 @@ namespace nd
             const auto cy = bounds.getCentreY();
             const auto radius = juce::jmin (bounds.getWidth(), bounds.getHeight()) * 0.5f;
             const auto angle  = startAngle + sliderPos * (endAngle - startAngle);
+            const auto accent = slider.findColour (juce::Slider::rotarySliderFillColourId);
 
-            const auto trackThickness = juce::jmax (4.0f, radius * 0.10f);
-            const auto trackR = radius - trackThickness * 0.5f;
+            // Glow spread scales down on small knobs -- otherwise a halo sized for
+            // the big 200px knob swallows a thin 60px knob's ring and reads as blur.
+            const auto glowScale = juce::jlimit (0.30f, 1.0f, radius / 95.0f);
 
-            // Outer subtle ring shadow
-            g.setColour (juce::Colours::black.withAlpha (0.35f));
-            g.drawEllipse (cx - radius, cy - radius + 2.0f, radius * 2.0f, radius * 2.0f, 1.0f);
+            // Drop shadow beneath the whole knob.
+            g.setColour (juce::Colours::black.withAlpha (0.40f));
+            g.fillEllipse (cx - radius, cy - radius + 3.0f, radius * 2.0f, radius * 2.0f);
 
-            // Track
-            juce::Path track;
-            track.addCentredArc (cx, cy, trackR, trackR, 0.0f, startAngle, endAngle, true);
-            g.setColour (slider.findColour (juce::Slider::rotarySliderOutlineColourId));
-            g.strokePath (track, juce::PathStrokeType (trackThickness, juce::PathStrokeType::curved));
+            // Outer bezel -- beveled dark-metal rim.
+            juce::ColourGradient bezelGrad (juce::Colour (0xff394456), cx, cy - radius,
+                                            juce::Colour (0xff111419), cx, cy + radius, false);
+            g.setGradientFill (bezelGrad);
+            g.fillEllipse (cx - radius, cy - radius, radius * 2.0f, radius * 2.0f);
 
-            // Filled arc with cyan→violet gradient — emphasises the "two voices" feel.
-            juce::Path filled;
-            filled.addCentredArc (cx, cy, trackR, trackR, 0.0f, startAngle, angle, true);
-            juce::ColourGradient grad (col::accent.darker (0.4f), cx - trackR, cy,
-                                       col::accentAlt.brighter (0.05f), cx + trackR, cy, false);
-            g.setGradientFill (grad);
-            g.strokePath (filled, juce::PathStrokeType (trackThickness, juce::PathStrokeType::curved,
-                                                        juce::PathStrokeType::rounded));
+            const auto bezelInner = radius * 0.86f;
+            g.setColour (juce::Colour (0xff0b0e13));
+            g.fillEllipse (cx - bezelInner, cy - bezelInner, bezelInner * 2.0f, bezelInner * 2.0f);
+            g.setColour (juce::Colours::white.withAlpha (0.06f));
+            g.drawEllipse (cx - radius + 1.0f, cy - radius + 1.0f, (radius - 1.0f) * 2.0f, (radius - 1.0f) * 2.0f, 1.0f);
 
-            // Subtle glow
-            const auto inner = radius - trackThickness * 1.7f;
-            const auto glow  = juce::jlimit (0.0f, 1.0f, sliderPos);
-            for (int i = 10; i > 0; --i)
+            // Tick marks ringing the bezel -- lit up to the current value.
+            constexpr int numTicks = 11;
+            for (int t = 0; t < numTicks; ++t)
             {
-                const float r = inner + (float) i * 0.9f;
-                const float a = (0.04f + 0.10f * glow) * (1.0f - (float) i / 10.0f);
-                g.setColour (col::accent.withAlpha (a));
-                g.fillEllipse (cx - r, cy - r, r * 2.0f, r * 2.0f);
-            }
-
-            // Tick marks
-            for (int t = 0; t <= 4; ++t)
-            {
-                const float ta = startAngle + (float) t / 4.0f * (endAngle - startAngle);
-                const float r1 = inner + 1.0f;
-                const float r2 = inner + 4.0f;
+                const float ta = startAngle + (float) t / (float) (numTicks - 1) * (endAngle - startAngle);
+                const float r1 = bezelInner + 2.0f;
+                const float r2 = radius - 3.0f;
                 const float sx1 = cx + std::sin (ta) * r1;
                 const float sy1 = cy - std::cos (ta) * r1;
                 const float sx2 = cx + std::sin (ta) * r2;
                 const float sy2 = cy - std::cos (ta) * r2;
-                g.setColour (col::textFaint.withAlpha (0.6f));
-                g.drawLine (sx1, sy1, sx2, sy2, 1.0f);
+                if (ta <= angle)
+                {
+                    g.setColour (accent.withAlpha (0.30f));
+                    g.drawLine (sx1, sy1, sx2, sy2, 1.6f + 1.6f * glowScale);
+                    g.setColour (accent.brighter (0.25f));
+                    g.drawLine (sx1, sy1, sx2, sy2, 1.4f);
+                }
+                else
+                {
+                    g.setColour (juce::Colours::white.withAlpha (0.10f));
+                    g.drawLine (sx1, sy1, sx2, sy2, 1.4f);
+                }
             }
 
-            // Brushed dark face
-            juce::ColourGradient faceGrad (juce::Colour (0xff232c3a), cx, cy - inner,
-                                           juce::Colour (0xff0e1218), cx, cy + inner, false);
+            // Progress arc track, inset inside the bezel.
+            const auto trackThickness = juce::jmax (4.0f, bezelInner * 0.11f);
+            const auto trackR = bezelInner - trackThickness * 0.5f - 3.0f;
+
+            juce::Path track;
+            track.addCentredArc (cx, cy, trackR, trackR, 0.0f, startAngle, endAngle, true);
+            g.setColour (accent.darker (0.78f));
+            g.strokePath (track, juce::PathStrokeType (trackThickness, juce::PathStrokeType::curved));
+
+            juce::Path filled;
+            filled.addCentredArc (cx, cy, trackR, trackR, 0.0f, startAngle, angle, true);
+
+            // Layered glow (bloom) behind the lit arc -- spread is additive pixels
+            // scaled by glowScale, so it stays proportional instead of swallowing
+            // a thin small-knob ring in haze.
+            g.setColour (accent.withAlpha (0.15f));
+            g.strokePath (filled, juce::PathStrokeType (trackThickness + 8.0f * glowScale, juce::PathStrokeType::curved,
+                                                        juce::PathStrokeType::rounded));
+            g.setColour (accent.withAlpha (0.30f));
+            g.strokePath (filled, juce::PathStrokeType (trackThickness + 3.5f * glowScale, juce::PathStrokeType::curved,
+                                                        juce::PathStrokeType::rounded));
+
+            // Filled arc keeps the accent -> accentAlt gradient ("two voices" feel).
+            juce::ColourGradient grad (col::accent.brighter (0.05f), cx - trackR, cy,
+                                       col::accentAlt.brighter (0.1f), cx + trackR, cy, false);
+            g.setGradientFill (grad);
+            g.strokePath (filled, juce::PathStrokeType (trackThickness, juce::PathStrokeType::curved,
+                                                        juce::PathStrokeType::rounded));
+
+            // Bright highlight core down the middle of the lit arc -- only on rings
+            // thick enough that a translucent core stroke won't just look like mush.
+            if (trackThickness > 6.0f)
+            {
+                g.setColour (juce::Colours::white.withAlpha (0.35f));
+                g.strokePath (filled, juce::PathStrokeType (trackThickness * 0.3f, juce::PathStrokeType::curved,
+                                                            juce::PathStrokeType::rounded));
+            }
+
+            // Glossy face.
+            const auto inner = trackR - trackThickness * 0.9f;
+            juce::ColourGradient faceGrad (juce::Colour (0xff2a3444), cx - inner * 0.4f, cy - inner * 0.5f,
+                                           juce::Colour (0xff0a0d12), cx + inner * 0.3f, cy + inner * 0.7f, true);
             g.setGradientFill (faceGrad);
             g.fillEllipse (cx - inner, cy - inner, inner * 2.0f, inner * 2.0f);
 
-            // Inner rim highlight
-            g.setColour (juce::Colours::white.withAlpha (0.05f));
+            juce::ColourGradient gloss (juce::Colours::white.withAlpha (0.14f), cx - inner * 0.35f, cy - inner * 0.55f,
+                                        juce::Colours::white.withAlpha (0.0f),  cx, cy + inner * 0.2f, true);
+            g.setGradientFill (gloss);
+            g.fillEllipse (cx - inner, cy - inner, inner * 2.0f, inner * 2.0f);
+
+            g.setColour (juce::Colours::white.withAlpha (0.06f));
             g.drawEllipse (cx - inner, cy - inner, inner * 2.0f, inner * 2.0f, 1.0f);
 
-            // Indicator with drop shadow
+            // Pointer.
             juce::Path pointer;
-            const float pw = juce::jmax (3.0f, inner * 0.10f);
-            const float pl = inner * 0.78f;
-            pointer.addRoundedRectangle (-pw * 0.5f, -inner * 0.92f, pw, pl, pw * 0.5f);
+            const float pw = juce::jmax (3.5f, inner * 0.09f);
+            const float pl = inner * 0.74f;
+            pointer.addRoundedRectangle (-pw * 0.5f, -inner * 0.86f, pw, pl, pw * 0.5f);
             const auto rot = juce::AffineTransform::rotation (angle).translated (cx, cy);
 
             g.setColour (juce::Colours::black.withAlpha (0.55f));
             g.fillPath (pointer, rot.translated (0.0f, 1.5f));
-            g.setColour (col::accent.brighter (0.3f));
+            g.setColour (accent.withAlpha (0.30f));
+            g.strokePath (pointer, juce::PathStrokeType (1.0f + 2.0f * glowScale), rot);
+            g.setColour (accent.brighter (0.35f));
             g.fillPath (pointer, rot);
 
-            // Centre dot
-            const float dotR = juce::jmax (2.0f, inner * 0.07f);
-            g.setColour (juce::Colour (0xff0d1117));
+            const float dotR = juce::jmax (2.5f, inner * 0.08f);
+            g.setColour (juce::Colour (0xff05070a));
             g.fillEllipse (cx - dotR, cy - dotR, dotR * 2.0f, dotR * 2.0f);
-            g.setColour (col::accent.withAlpha (0.4f));
+            g.setColour (accent.withAlpha (0.85f));
             g.drawEllipse (cx - dotR, cy - dotR, dotR * 2.0f, dotR * 2.0f, 1.0f);
         }
 
         void drawButtonBackground (juce::Graphics& g, juce::Button& b,
-                                   const juce::Colour& backgroundColour,
+                                   const juce::Colour&,
                                    bool /*shouldDrawButtonAsHighlighted*/,
                                    bool shouldDrawButtonAsDown) override
         {
             auto r = b.getLocalBounds().toFloat().reduced (1.0f);
             const bool on = b.getToggleState();
-            juce::Colour fill = on ? col::accent : backgroundColour;
+            juce::Colour fill = on ? col::accent : juce::Colour (0xff161c26);
             if (shouldDrawButtonAsDown) fill = fill.darker (0.15f);
 
+            const float radius = r.getHeight() * 0.5f;
+            const bool connectedLeft  = (b.getConnectedEdgeFlags() & juce::Button::ConnectedOnLeft)  != 0;
+            const bool connectedRight = (b.getConnectedEdgeFlags() & juce::Button::ConnectedOnRight) != 0;
+
+            juce::Path p;
+            p.addRoundedRectangle (r.getX(), r.getY(), r.getWidth(), r.getHeight(), radius, radius,
+                                   ! connectedLeft, ! connectedRight, ! connectedLeft, ! connectedRight);
+
             g.setColour (fill);
-            g.fillRoundedRectangle (r, 4.0f);
+            g.fillPath (p);
 
             if (! on)
             {
-                g.setColour (col::panelEdge);
-                g.drawRoundedRectangle (r, 4.0f, 1.0f);
+                g.setColour (col::panelEdge.withAlpha (0.7f));
+                g.strokePath (p, juce::PathStrokeType (1.0f));
             }
         }
 
@@ -189,6 +240,15 @@ namespace nd
         {
             ix = juce::jlimit (0, 2, ix);
             buttons[ix]->setToggleState (true, juce::dontSendNotification);
+        }
+
+        void paint (juce::Graphics& g) override
+        {
+            auto r = getLocalBounds().toFloat();
+            g.setColour (juce::Colour (0xff0c0f15).withAlpha (0.55f));
+            g.fillRoundedRectangle (r, r.getHeight() * 0.5f);
+            g.setColour (col::panelEdge.withAlpha (0.6f));
+            g.drawRoundedRectangle (r.reduced (0.5f), r.getHeight() * 0.5f, 1.0f);
         }
 
         void resized() override

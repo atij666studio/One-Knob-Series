@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include <BinaryData.h>
 
 namespace
 {
@@ -9,6 +10,8 @@ namespace
 NAMDoubleEditor::NAMDoubleEditor (NAMDoubleProcessor& p)
     : juce::AudioProcessorEditor (&p), proc (p)
 {
+    background = juce::ImageCache::getFromMemory (BinaryData::Background_png, BinaryData::Background_pngSize);
+
     setLookAndFeel (&lnf);
     setSize (kWidth, kHeight);
 
@@ -112,30 +115,27 @@ NAMDoubleEditor::~NAMDoubleEditor()
 
 void NAMDoubleEditor::paint (juce::Graphics& g)
 {
-    juce::ColourGradient bg (nd::col::bg1, (float) getWidth() * 0.5f, 0.0f,
-                             nd::col::bg0, (float) getWidth() * 0.5f, (float) getHeight(), false);
-    g.setGradientFill (bg);
-    g.fillAll();
+    if (background.isValid())
+    {
+        g.drawImage (background, getLocalBounds().toFloat());
+    }
+    else
+    {
+        juce::ColourGradient bg (nd::col::bg1, (float) getWidth() * 0.5f, 0.0f,
+                                 nd::col::bg0, (float) getWidth() * 0.5f, (float) getHeight(), false);
+        g.setGradientFill (bg);
+        g.fillAll();
+    }
 
-    // Top brand bar
-    auto topH = 56;
-    g.setColour (nd::col::panel);
-    g.fillRect (juce::Rectangle<int> (0, 0, getWidth(), topH));
-    g.setColour (nd::col::accent);
-    g.fillRect (0, topH - 1, getWidth(), 1);
-    g.setColour (juce::Colours::black.withAlpha (0.3f));
-    g.fillRect (0, topH, getWidth(), 1);
-
+    const auto topH = 56;
     g.setColour (nd::col::accent);
     g.fillRect (16, 14, 3, topH - 28);
+    g.setColour (nd::col::accent.withAlpha (0.35f));
+    g.fillRect (0, topH - 1, getWidth(), 1);
 
-    // Footer panel
     const int botH = 124;
-    auto footer = juce::Rectangle<int> (0, getHeight() - botH, getWidth(), botH);
-    g.setColour (nd::col::panel);
-    g.fillRect (footer);
-    g.setColour (nd::col::panelEdge);
-    g.fillRect (footer.getX(), footer.getY(), footer.getWidth(), 1);
+    g.setColour (nd::col::panelEdge.withAlpha (0.5f));
+    g.fillRect (0, getHeight() - botH, getWidth(), 1);
 }
 
 void NAMDoubleEditor::resized()

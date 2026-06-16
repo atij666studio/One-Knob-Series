@@ -83,6 +83,10 @@ endif()
 
 juce_generate_juce_header(AtiNAMatiCDouble)
 
+juce_add_binary_data(AtiNAMatiCDoubleData SOURCES
+    Resources/Background.png
+)
+
 target_sources(AtiNAMatiCDouble PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginProcessor.h
@@ -100,6 +104,7 @@ target_compile_definitions(AtiNAMatiCDouble PUBLIC
 )
 
 target_link_libraries(AtiNAMatiCDouble PRIVATE
+    AtiNAMatiCDoubleData
     juce::juce_audio_utils
     juce::juce_audio_processors
     juce::juce_audio_basics
