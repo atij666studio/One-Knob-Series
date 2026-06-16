@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include <BinaryData.h>
 
 namespace
 {
@@ -9,6 +10,8 @@ namespace
 NAMGateEditor::NAMGateEditor (NAMGateProcessor& p)
     : juce::AudioProcessorEditor (&p), proc (p)
 {
+    background = juce::ImageCache::getFromMemory (BinaryData::Background_png, BinaryData::Background_pngSize);
+
     setLookAndFeel (&lnf);
     setSize (kWidth, kHeight);
 
@@ -115,32 +118,27 @@ NAMGateEditor::~NAMGateEditor()
 
 void NAMGateEditor::paint (juce::Graphics& g)
 {
-    // Background gradient (slight vignette feel)
-    juce::ColourGradient bg (ng::col::bg1, (float) getWidth() * 0.5f, 0.0f,
-                             ng::col::bg0, (float) getWidth() * 0.5f, (float) getHeight(), false);
-    g.setGradientFill (bg);
-    g.fillAll();
+    if (background.isValid())
+    {
+        g.drawImage (background, getLocalBounds().toFloat());
+    }
+    else
+    {
+        juce::ColourGradient bg (ng::col::bg1, (float) getWidth() * 0.5f, 0.0f,
+                                 ng::col::bg0, (float) getWidth() * 0.5f, (float) getHeight(), false);
+        g.setGradientFill (bg);
+        g.fillAll();
+    }
 
-    // Top brand bar
-    auto topH = 56;
-    g.setColour (ng::col::panel);
-    g.fillRect (juce::Rectangle<int> (0, 0, getWidth(), topH));
-    g.setColour (ng::col::accent);
-    g.fillRect (0, topH - 1, getWidth(), 1);
-    g.setColour (juce::Colours::black.withAlpha (0.3f));
-    g.fillRect (0, topH, getWidth(), 1);
-
-    // Side accent strip on the title
+    const auto topH = 56;
     g.setColour (ng::col::accent);
     g.fillRect (16, 14, 3, topH - 28);
+    g.setColour (ng::col::accent.withAlpha (0.35f));
+    g.fillRect (0, topH - 1, getWidth(), 1);
 
-    // Footer panel for Mix / Output
     const int botH = 124;
-    auto footer = juce::Rectangle<int> (0, getHeight() - botH, getWidth(), botH);
-    g.setColour (ng::col::panel);
-    g.fillRect (footer);
-    g.setColour (ng::col::panelEdge);
-    g.fillRect (footer.getX(), footer.getY(), footer.getWidth(), 1);
+    g.setColour (ng::col::panelEdge.withAlpha (0.5f));
+    g.fillRect (0, getHeight() - botH, getWidth(), 1);
 }
 
 void NAMGateEditor::resized()

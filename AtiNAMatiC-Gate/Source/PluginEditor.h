@@ -19,6 +19,7 @@ private:
 
     NAMGateProcessor& proc;
     ng::GateLNF       lnf;
+    juce::Image       background;
 
     ng::TitleBadge   titleBadge;
     ng::AboutOverlay aboutOverlay;
