@@ -72,7 +72,7 @@ void NAMDirtProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mid
         buffer.clear (c, 0, buffer.getNumSamples());
 
     const float dirt  = apvts.getRawParameterValue (kDirt)->load();
-    const int   type  = (int) apvts.getRawParameterValue (kType)->load();
+    const int   type  = juce::roundToInt (apvts.getRawParameterValue (kType)->load());
     const float mix   = apvts.getRawParameterValue (kMix)->load();
     const float outDb = apvts.getRawParameterValue (kOutput)->load();
 

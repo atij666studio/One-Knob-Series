@@ -26,7 +26,9 @@ namespace nd
     //         Edge   : tanh — even, smooth breakup
     //         Bite   : tanh + small hard-clip ceiling (sharper edge)
     //         Crunch : tanh of a tanh (more compressed, fizzier upper grit)
-    //   5. De-emphasis (mirror of pre-emphasis)
+    //   5. De-emphasis (true inverse of pre-emphasis: same freq/Q, reciprocal
+    //      gain, so the tonal tilt is undone afterward and only the harmonic
+    //      content the shaper added is left behind)
     //   6. Post-tone tilt — gently darkens as DIRT increases so it doesn't
     //      get harsh (still keeps "alive" upper-mid bite)
     //   7. Auto loudness make-up + user OUTPUT trim
@@ -56,7 +58,8 @@ namespace nd
             tightenHPF.setCutoffFrequency (40.0f);
             tightenHPF.setResonance (0.5f);
 
-            preEmpCoefs  = juce::dsp::IIR::Coefficients<float>::makePeakFilter (sr, 1500.0f, 0.7f, 1.0f);
+            preEmpCoefs   = juce::dsp::IIR::Coefficients<float>::makePeakFilter (sr, 1500.0f, 0.7f, 1.0f);
+            deEmpCoefs    = juce::dsp::IIR::Coefficients<float>::makePeakFilter (sr, 1500.0f, 0.7f, 1.0f);
             postTiltCoefs = juce::dsp::IIR::Coefficients<float>::makePeakFilter (sr, 1500.0f, 0.7f, 1.0f);
             for (int c = 0; c < (int) preEmp.size(); ++c)
             {
@@ -64,17 +67,20 @@ namespace nd
                 deEmp[c].reset();
                 postTilt[c].reset();
                 preEmp[c].coefficients   = preEmpCoefs;
-                deEmp[c].coefficients    = preEmpCoefs;     // mirror update keeps them inverse-ish
+                deEmp[c].coefficients    = deEmpCoefs;
                 postTilt[c].coefficients = postTiltCoefs;
             }
 
-            updatePreEmp (Edge);
+            targetPreEmp (Edge, smFreq, smGainDb);
+            updatePreEmpCoeffs (smFreq, smGainDb);
             updatePostTilt (0.0f);
+            // ~30 ms block-rate smoothing on the pre/de-emphasis freq+gain so
+            // switching Type doesn't snap the filter coefficients mid-stream.
+            smTypeCoef = std::exp (-float (blockSize) / float (0.030 * sr));
 
             envIn  = 0.0f;
             envOut = 0.0f;
             grit   = 0.0f;
-            currentType = -1;
         }
 
         void process (juce::AudioBuffer<float>& buffer,
@@ -101,11 +107,15 @@ namespace nd
             const float autoMakeupDb = -driveDb * 0.85f;
             const float outGain = juce::Decibels::decibelsToGain (autoMakeupDb + outGainDb);
 
-            if (type != currentType)
-            {
-                updatePreEmp ((Type) type);
-                currentType = type;
-            }
+            // Smooth the pre/de-emphasis freq+gain toward the selected Type's
+            // target every block, instead of snapping coefficients the instant
+            // Type changes -- removes the audible filter-jump click.
+            float targFreq, targGainDb;
+            targetPreEmp ((Type) type, targFreq, targGainDb);
+            smFreq   = smTypeCoef * smFreq   + (1.0f - smTypeCoef) * targFreq;
+            smGainDb = smTypeCoef * smGainDb + (1.0f - smTypeCoef) * targGainDb;
+            updatePreEmpCoeffs (smFreq, smGainDb);
+
             updatePostTilt (dirt);
 
             const int chClamp = juce::jmin (numCh, 8);
@@ -159,7 +169,7 @@ namespace nd
                             break;
                     }
 
-                    // 5) de-emphasis (mirror pre with opposite gain — see updatePreEmp)
+                    // 5) de-emphasis (true inverse of pre-emphasis — see updatePreEmpCoeffs)
                     const float deemp = deEmp[c].processSample (sat);
 
                     // 6) post-tone tilt (slight darken as dirt rises)
@@ -195,13 +205,10 @@ namespace nd
         }
 
     private:
-        // Pre-emphasis: focus the grit in the upper-mid region appropriate
-        // to the chosen Type. The de-emphasis filter just mirrors the SAME
-        // coefficients (which works as a soft inverse for moderate Q's and
-        // is the cheapest way to stay clean tonally).
-        void updatePreEmp (Type t)
+        // Pre-emphasis target: focuses the grit in the upper-mid region
+        // appropriate to the chosen Type.
+        static void targetPreEmp (Type t, float& freq, float& gainDb)
         {
-            float freq = 1500.0f, q = 0.7f, gainDb = 4.0f;
             switch (t)
             {
                 case Bite:   freq = 2200.0f; gainDb = 5.0f; break;   // bites in upper mids
@@ -209,8 +216,17 @@ namespace nd
                 case Edge:
                 default:     freq = 1500.0f; gainDb = 4.0f; break;
             }
+        }
+
+        // Applies the pre-emphasis boost and its genuine inverse (same freq/Q,
+        // reciprocal gain) for the de-emphasis stage.
+        void updatePreEmpCoeffs (float freq, float gainDb)
+        {
+            constexpr float q = 0.7f;
             *preEmpCoefs = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (
                 sampleRate, freq, q, juce::Decibels::decibelsToGain (gainDb));
+            *deEmpCoefs = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (
+                sampleRate, freq, q, juce::Decibels::decibelsToGain (-gainDb));
         }
 
         void updatePostTilt (float dirt)
@@ -227,12 +243,16 @@ namespace nd
 
         juce::dsp::StateVariableTPTFilter<float> tightenHPF;
 
-        juce::ReferenceCountedObjectPtr<juce::dsp::IIR::Coefficients<float>> preEmpCoefs, postTiltCoefs;
+        juce::ReferenceCountedObjectPtr<juce::dsp::IIR::Coefficients<float>> preEmpCoefs, deEmpCoefs, postTiltCoefs;
         std::array<juce::dsp::IIR::Filter<float>, 8> preEmp;
         std::array<juce::dsp::IIR::Filter<float>, 8> deEmp;
         std::array<juce::dsp::IIR::Filter<float>, 8> postTilt;
 
-        int   currentType { -1 };
+        // Block-rate smoothed pre/de-emphasis target (eliminates the
+        // coefficient-jump click when switching Type).
+        float smFreq   { 1500.0f };
+        float smGainDb {    4.0f };
+        float smTypeCoef { 0.0f };
 
         float envIn   { 0.0f };
         float envOut  { 0.0f };
