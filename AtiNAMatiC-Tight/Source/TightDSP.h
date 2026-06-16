@@ -98,8 +98,12 @@ namespace nt
             shapeAmtSm.reset (sr, 0.030);
             shapeAmtSm.setCurrentAndTargetValue (0.0f);
 
-            scratchDet.setSize (1, blockSize, false, false, true);
-            shapeBuf.assign ((size_t) blockSize, 0.0f);
+            // Sized once here to the negotiated block size; process() clamps to
+            // this capacity instead of resizing, so there's never an allocation
+            // on the audio thread even if a host violates the block-size contract.
+            maxBlockSize = juce::jmax (1, blockSize);
+            scratchDet.setSize (1, maxBlockSize, false, false, true);
+            shapeBuf.assign ((size_t) maxBlockSize, 0.0f);
 
             lowEnv = 0.0f;
             lowEnvCoef = std::exp (-1.0f / float (0.080 * sr));
@@ -119,14 +123,17 @@ namespace nt
         void process (juce::AudioBuffer<float>& buffer)
         {
             const int numCh = juce::jmin (buffer.getNumChannels(), channels);
-            const int n     = buffer.getNumSamples();
+            // Clamp to the capacity reserved in prepare() rather than resizing
+            // scratchDet/shapeBuf here -- guarantees no audio-thread allocation
+            // even if a host sends a larger block than it negotiated.
+            const int n = juce::jmin (buffer.getNumSamples(), maxBlockSize);
             if (numCh <= 0 || n <= 0) return;
 
             const float t = juce::jlimit (0.0f, 1.0f, tight.load());
             const Mode  m = (Mode) juce::jlimit (0, 2, modeIx.load());
 
-            float hpfHz, dipDb, presenceDb, shapeAmt, inputTrimDb;
-            mapKnob (t, m, hpfHz, dipDb, presenceDb, shapeAmt, inputTrimDb);
+            float hpfHz, dipDb, presenceDb, shapeAmt;
+            mapKnob (t, m, hpfHz, dipDb, presenceDb, shapeAmt);
 
             // Smooth filter params at block rate — no zipper noise when sweeping TIGHT
             smHpfHz  = smCoef * smHpfHz  + (1.0f - smCoef) * hpfHz;
@@ -136,7 +143,6 @@ namespace nt
             shapeAmtSm.setTargetValue (shapeAmt);
 
             // ---- Low-energy meter ----
-            if (scratchDet.getNumSamples() < n) scratchDet.setSize (1, n, false, false, true);
             scratchDet.clear (0, 0, n);
             const float invCh = 1.0f / float (numCh);
             for (int ch = 0; ch < numCh; ++ch)
@@ -155,8 +161,6 @@ namespace nt
             }
             lowEnergyDb.store (20.0f * std::log10 (juce::jmax (lowEnv, 1.0e-7f)));
 
-            juce::ignoreUnused (inputTrimDb);
-
             // ---- Filters ----
             {
                 juce::dsp::AudioBlock<float> blk (buffer.getArrayOfWritePointers(),
@@ -169,7 +173,6 @@ namespace nt
             }
 
             // ---- Transient shaping ----
-            shapeBuf.resize ((size_t) n);
             for (int i = 0; i < n; ++i)
                 shapeBuf[(size_t) i] = shapeAmtSm.getNextValue();
 
@@ -189,14 +192,13 @@ namespace nt
         // Maps the master TIGHT knob through the Mode curve to per-stage params.
         static void mapKnob (float t, Mode m,
                              float& hpfHz, float& dipDb, float& presenceDb,
-                             float& shapeAmt, float& inputTrimDb)
+                             float& shapeAmt)
         {
             // Base curves (Modern):
             //  HPF:      60 Hz @ 0   ..  150 Hz @ 1
             //  Dip:       0 dB @ 0   .. -5.5 dB @ 1   centered around 280 Hz (Q ~1.0)
             //  Presence: +0 dB @ 0   .. +3.0 dB @ 1   high-shelf @ 2.5 kHz
             //  Shaper:    0   @ 0   ..   0.85 @ 1
-            //  Trim:      0 dB                   (input level kept neutral)
             float hpfMin  = 55.0f, hpfMax  = 150.0f;
             float dipMax  = -5.5f;
             float presMax =  3.0f;
@@ -227,7 +229,6 @@ namespace nt
             dipDb       = juce::jmap (te, 0.0f, 1.0f, 0.0f,   dipMax);
             presenceDb  = juce::jmap (te, 0.0f, 1.0f, 0.0f,   presMax);
             shapeAmt    = juce::jmap (te, 0.0f, 1.0f, 0.0f,   shpMax);
-            inputTrimDb = 0.0f;
         }
 
         void updateFilters (float hpfHz, float dipDb, float presDb)
@@ -242,10 +243,9 @@ namespace nt
                                  (sampleRate, 2500.0, 0.7f, dbToGain (presDb));
         }
 
-        // Helper removed — shape amount now pre-computed into `shapeBuf`.
-
         double sampleRate { 44100.0 };
         int    channels   { 2 };
+        int    maxBlockSize { 0 };
 
         juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>,
                                        juce::dsp::IIR::Coefficients<float>>
