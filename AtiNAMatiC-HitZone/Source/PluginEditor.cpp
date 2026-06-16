@@ -97,7 +97,7 @@ AtiNAMatiCHitZoneEditor::AtiNAMatiCHitZoneEditor (AtiNAMatiCHitZoneProcessor& p)
     sweetSpot.setDoubleClickReturnValue        (true, 0.5);
     mixSlider.setDoubleClickReturnValue        (true, 1.0);
     outputSlider.setDoubleClickReturnValue     (true, 0.0);
-    responseSlider.setDoubleClickReturnValue   (true, 0.5);
+    responseSlider.setDoubleClickReturnValue   (true, 0.35);
     manualGainSlider.setDoubleClickReturnValue (true, 0.0);
 
     // Professional: value display functions (shown in slider popup / tooltip)

@@ -201,7 +201,6 @@ namespace nhz
                 targetGainDb = juce::jlimit (-24.0f, 24.0f, manualGainDb.load());
             }
 
-            appliedGainDb.store (targetGainDb);
             inputGainSmoothed.setTargetValue  (dbToGain (targetGainDb));
             outputGainSmoothed.setTargetValue (dbToGain (outputDb.load()));
             mixSmoothed.setTargetValue        (juce::jlimit (0.0f, 1.0f, mix.load()));
@@ -225,11 +224,13 @@ namespace nhz
                 scratchDry.copyFrom (ch, 0, buffer, ch, 0, n);
 
             // ---- Step 2: input gain + asymmetric soft saturation ----
+            float lastAppliedGain = 1.0f;
             for (int i = 0; i < n; ++i)
             {
                 const float g     = inputGainSmoothed.getNextValue();
                 const float satA  = satSmoothed.getNextValue();
                 const float drive = 1.0f + satA * 1.8f; // 1 .. 2.8
+                lastAppliedGain   = g;
 
                 for (int ch = 0; ch < numCh; ++ch)
                 {
@@ -247,6 +248,11 @@ namespace nhz
                     buffer.getWritePointer (ch)[i] = x;
                 }
             }
+
+            // Report what was actually applied to the audio (the smoothed,
+            // ramped gain), not the raw unsmoothed target -- keeps the UI
+            // readout in sync with what's audible during the ramp.
+            appliedGainDb.store (gainToDb (lastAppliedGain));
 
             // ---- Step 3: tonal bias (low/high shelves) ----
             {
