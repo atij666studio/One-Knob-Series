@@ -68,6 +68,11 @@ namespace ng
             currentGain  = 1.0f;
             gateOpen     = false;
             holdSamples  = 0;
+
+            outGainSm.reset (sr, 0.02);
+            mixSm.reset (sr, 0.02);
+            outGainSm.setCurrentAndTargetValue (1.0f);
+            mixSm.setCurrentAndTargetValue (1.0f);
         }
 
         void process (juce::AudioBuffer<float>& buffer,
@@ -99,7 +104,8 @@ namespace ng
             const int   holdSamplesMax = (int) std::round (holdMs * 0.001f * (float) sampleRate);
 
             const float floorGain = juce::Decibels::decibelsToGain (-65.0f);
-            const float outGain   = juce::Decibels::decibelsToGain (outGainDb);
+            outGainSm.setTargetValue (juce::Decibels::decibelsToGain (outGainDb));
+            mixSm.setTargetValue (mix);
 
             float lastOpenDb  = openThrDb;
             float lastCloseDb = closeThrDb;
@@ -192,8 +198,10 @@ namespace ng
                 int readPos = delayWritePos - lookaheadSamples;
                 if (readPos < 0) readPos += delayCap;
 
-                const float gateMul  = shapedGain * mix + (1.0f - mix);
-                const float finalMul = gateMul * outGain;
+                const float mixNow     = mixSm.getNextValue();
+                const float outGainNow = outGainSm.getNextValue();
+                const float gateMul  = shapedGain * mixNow + (1.0f - mixNow);
+                const float finalMul = gateMul * outGainNow;
 
                 for (int c = 0; c < chClamp; ++c)
                 {
@@ -244,6 +252,8 @@ namespace ng
         float  noiseTrackDnAlpha { 0.0f };
 
         juce::dsp::IIR::Filter<float> scHPF;
+
+        juce::SmoothedValue<float> outGainSm, mixSm;
 
         unsigned meterCounter { 0 };
 
