@@ -67,7 +67,18 @@ namespace na
             airE   = 0.0f;
 
             currentMode = -1;
+            smAir = 0.0f;
             updateAir (0.0f, Studio);
+
+            // ~25 ms block-rate smoothing on the AIR macro -- avoids the
+            // filter-coefficient jump click on fast knob moves/automation.
+            smCoef = std::exp (-float (juce::jmax (blockSize, 32)) / float (0.025 * sr));
+
+            // Per-sample ramps for output trim and dry/wet mix.
+            outGainSm.reset (sr, 0.02);
+            mixSm.reset (sr, 0.02);
+            outGainSm.setCurrentAndTargetValue (1.0f);
+            mixSm.setCurrentAndTargetValue (1.0f);
         }
 
         void process (juce::AudioBuffer<float>& buffer,
@@ -79,27 +90,30 @@ namespace na
 
             const Mode m = (Mode) juce::jlimit (0, 1, mode);
 
+            // Smooth the AIR macro at block rate so the filter-coefficient
+            // update below doesn't snap on a fast knob move/automation.
+            smAir = smCoef * smAir + (1.0f - smCoef) * air;
+
             // --- Macro mapping -------------------------------------------
             // Shelf / presence / body amounts are computed inside updateAir;
             // here we only need the values used directly by the per-sample
             // mixer (widening + Haas).
-            const float sidesGain     = 1.0f + air * (m == Room ? 0.7f : 0.4f);
+            const float sidesGain     = 1.0f + smAir * (m == Room ? 0.7f : 0.4f);
             const int   sideDelaySmps = (m == Room)
-                ? (int) std::round (sampleRate * (0.0008 + 0.0035 * air)) // ~0.8..4.3 ms
+                ? (int) std::round (sampleRate * (0.0008 + 0.0035 * smAir)) // ~0.8..4.3 ms
                 : 0;
 
             // Update shelves cheaply per block. Filters share coefficient
             // objects — write once, all per-channel filters see the change.
-            if (m != currentMode || std::abs (lastAir - air) > 1.0e-4f)
+            if (m != currentMode || std::abs (lastAir - smAir) > 1.0e-4f)
             {
-                updateAir (air, m);
+                updateAir (smAir, m);
                 currentMode = m;
-                lastAir     = air;
+                lastAir     = smAir;
             }
 
-            const float outGain = juce::Decibels::decibelsToGain (outGainDb);
-            const float dryMul  = 1.0f - mix;
-            const float wetMul  = mix;
+            outGainSm.setTargetValue (juce::Decibels::decibelsToGain (outGainDb));
+            mixSm.setTargetValue (mix);
 
             const int chClamp = juce::jmin (numCh, 8);
             float* writePtrs[8] = { nullptr };
@@ -122,12 +136,8 @@ namespace na
                     const float R = writePtrs[1][i];
 
                     // EQ each side first (both channels share coefficients).
-                    const float Lf = bodyF[0].processSample (
-                                        presenceF[0].processSample (
-                                            airF[0].processSample (L)));
-                    const float Rf = bodyF[1].processSample (
-                                        presenceF[1].processSample (
-                                            airF[1].processSample (R)));
+                    const float Lf = runChain (0, L);
+                    const float Rf = runChain (1, R);
 
                     // Mid / Side (energy-preserving 1/sqrt(2) form).
                     const float Mid  = (Lf + Rf) * invSqrt2;
@@ -149,8 +159,10 @@ namespace na
                     const float wetL = (Mid + Side) * invSqrt2;
                     const float wetR = (Mid - Side) * invSqrt2;
 
-                    const float yL = wetL * outGain * wetMul + L * dryMul;
-                    const float yR = wetR * outGain * wetMul + R * dryMul;
+                    const float outGainNow = outGainSm.getNextValue();
+                    const float mixNow     = mixSm.getNextValue();
+                    const float yL = wetL * outGainNow * mixNow + L * (1.0f - mixNow);
+                    const float yR = wetR * outGainNow * mixNow + R * (1.0f - mixNow);
 
                     writePtrs[0][i] = yL;
                     writePtrs[1][i] = yR;
@@ -167,10 +179,10 @@ namespace na
                 for (int i = 0; i < n; ++i)
                 {
                     const float x = writePtrs[0][i];
-                    const float f = bodyF[0].processSample (
-                                       presenceF[0].processSample (
-                                           airF[0].processSample (x)));
-                    const float y = f * outGain * wetMul + x * dryMul;
+                    const float f = runChain (0, x);
+                    const float outGainNow = outGainSm.getNextValue();
+                    const float mixNow     = mixSm.getNextValue();
+                    const float y = f * outGainNow * mixNow + x * (1.0f - mixNow);
                     writePtrs[0][i] = y;
 
                     const float aIn  = std::abs (x);
@@ -197,6 +209,12 @@ namespace na
         }
 
     private:
+        // Shared per-channel EQ chain (air shelf -> presence peak -> body peak).
+        inline float runChain (int c, float x)
+        {
+            return bodyF[c].processSample (presenceF[c].processSample (airF[c].processSample (x)));
+        }
+
         void updateAir (float air, Mode m)
         {
             const float airShelfDb = air * 5.0f;
@@ -230,6 +248,11 @@ namespace na
 
         int   currentMode  { -1 };
         float lastAir      { -1.0f };
+
+        // Block-rate smoothed AIR macro + per-sample output/mix ramps.
+        float smAir  { 0.0f };
+        float smCoef { 0.0f };
+        juce::SmoothedValue<float> outGainSm, mixSm;
 
         float envIn  { 0.0f };
         float envOut { 0.0f };
