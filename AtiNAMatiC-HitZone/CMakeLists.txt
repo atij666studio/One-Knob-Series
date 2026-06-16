@@ -72,6 +72,10 @@ juce_add_plugin(AtiNAMatiCHitZone
 
 juce_generate_juce_header(AtiNAMatiCHitZone)
 
+juce_add_binary_data(AtiNAMatiCHitZoneData SOURCES
+    Resources/Background.png
+)
+
 target_sources(AtiNAMatiCHitZone PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginProcessor.h
@@ -90,6 +94,7 @@ target_compile_definitions(AtiNAMatiCHitZone PUBLIC
 )
 
 target_link_libraries(AtiNAMatiCHitZone PRIVATE
+    AtiNAMatiCHitZoneData
     juce::juce_audio_utils
     juce::juce_audio_processors
     juce::juce_audio_basics

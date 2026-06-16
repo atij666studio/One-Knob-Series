@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include <BinaryData.h>
 
 namespace
 {
@@ -26,6 +27,8 @@ namespace
 AtiNAMatiCHitZoneEditor::AtiNAMatiCHitZoneEditor (AtiNAMatiCHitZoneProcessor& p)
     : juce::AudioProcessorEditor (&p), proc (p), meter (p.dsp)
 {
+    background = juce::ImageCache::getFromMemory (BinaryData::Background_png, BinaryData::Background_pngSize);
+
     setLookAndFeel (&lnf);
     setOpaque (true);
 
@@ -128,11 +131,17 @@ AtiNAMatiCHitZoneEditor::~AtiNAMatiCHitZoneEditor()
 
 void AtiNAMatiCHitZoneEditor::paint (juce::Graphics& g)
 {
-    // Background gradient
-    juce::ColourGradient bg (nhz::col::bgTop, 0.0f, 0.0f,
-                             nhz::col::bgBot, 0.0f, (float) getHeight(), false);
-    g.setGradientFill (bg);
-    g.fillRect (getLocalBounds());
+    if (background.isValid())
+    {
+        g.drawImage (background, getLocalBounds().toFloat());
+    }
+    else
+    {
+        juce::ColourGradient bg (nhz::col::bgTop, 0.0f, 0.0f,
+                                 nhz::col::bgBot, 0.0f, (float) getHeight(), false);
+        g.setGradientFill (bg);
+        g.fillRect (getLocalBounds());
+    }
 
     // Title bar strip
     auto top = getLocalBounds().removeFromTop (62).toFloat().reduced (12.0f, 8.0f);

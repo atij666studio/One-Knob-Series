@@ -20,6 +20,7 @@ private:
 
     AtiNAMatiCHitZoneProcessor& proc;
     nhz::HitZoneLNF      lnf;
+    juce::Image          background;
 
     nhz::TitleBadge  titleBadge;
     nhz::AboutOverlay aboutOverlay;
