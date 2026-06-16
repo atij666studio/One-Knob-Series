@@ -86,8 +86,18 @@ namespace na
                 const float sy1 = cy - std::cos (ta) * r1;
                 const float sx2 = cx + std::sin (ta) * r2;
                 const float sy2 = cy - std::cos (ta) * r2;
-                g.setColour (ta <= angle ? accent.withAlpha (0.9f) : juce::Colours::white.withAlpha (0.10f));
-                g.drawLine (sx1, sy1, sx2, sy2, 1.4f);
+                if (ta <= angle)
+                {
+                    g.setColour (accent.withAlpha (0.35f));
+                    g.drawLine (sx1, sy1, sx2, sy2, 3.2f);
+                    g.setColour (accent.brighter (0.25f));
+                    g.drawLine (sx1, sy1, sx2, sy2, 1.6f);
+                }
+                else
+                {
+                    g.setColour (juce::Colours::white.withAlpha (0.10f));
+                    g.drawLine (sx1, sy1, sx2, sy2, 1.4f);
+                }
             }
 
             // Progress arc track, inset inside the bezel.
@@ -96,18 +106,29 @@ namespace na
 
             juce::Path track;
             track.addCentredArc (cx, cy, trackR, trackR, 0.0f, startAngle, endAngle, true);
-            g.setColour (juce::Colour (0xff1c2027));
+            g.setColour (accent.darker (0.78f));
             g.strokePath (track, juce::PathStrokeType (trackThickness, juce::PathStrokeType::curved));
 
             juce::Path filled;
             filled.addCentredArc (cx, cy, trackR, trackR, 0.0f, startAngle, angle, true);
-            g.setColour (accent.withAlpha (0.30f));
+
+            // Layered glow (bloom) behind the lit arc.
+            g.setColour (accent.withAlpha (0.16f));
+            g.strokePath (filled, juce::PathStrokeType (trackThickness * 2.6f, juce::PathStrokeType::curved,
+                                                        juce::PathStrokeType::rounded));
+            g.setColour (accent.withAlpha (0.32f));
             g.strokePath (filled, juce::PathStrokeType (trackThickness * 1.7f, juce::PathStrokeType::curved,
                                                         juce::PathStrokeType::rounded));
-            juce::ColourGradient grad (accent.darker (0.5f), cx - trackR, cy,
-                                       accent.brighter (0.2f), cx + trackR, cy, false);
+
+            juce::ColourGradient grad (accent.brighter (0.05f), cx - trackR, cy,
+                                       accent.brighter (0.45f), cx + trackR, cy, false);
             g.setGradientFill (grad);
             g.strokePath (filled, juce::PathStrokeType (trackThickness, juce::PathStrokeType::curved,
+                                                        juce::PathStrokeType::rounded));
+
+            // Bright highlight core down the middle of the lit arc.
+            g.setColour (juce::Colours::white.withAlpha (0.35f));
+            g.strokePath (filled, juce::PathStrokeType (trackThickness * 0.32f, juce::PathStrokeType::curved,
                                                         juce::PathStrokeType::rounded));
 
             // Glossy face.
@@ -283,8 +304,11 @@ namespace na
 
             const float vMin = -60.0f, vMax = 0.0f;
 
-            auto drawBand = [&] (juce::Rectangle<float> band, float db,
-                                 juce::Colour fillCol, const char* label)
+            static const juce::Colour meterGreen (0xff3ee06a);
+            static const juce::Colour meterAmber (0xffffc233);
+            static const juce::Colour meterRed   (0xffff3b3b);
+
+            auto drawBand = [&] (juce::Rectangle<float> band, float db, const char* label)
             {
                 g.setColour (col::bg0);
                 g.fillRoundedRectangle (band, 3.0f);
@@ -299,14 +323,24 @@ namespace na
                     const float segDb = vMin + (vMax - vMin) * ((float) i / (float) (numSeg - 1));
                     const bool lit = segDb <= litTo;
 
-                    juce::Colour c = fillCol;
-                    if (segDb > -12.0f) c = col::warn;
-                    if (segDb > -3.0f)  c = col::danger;
+                    juce::Colour zone = meterGreen;
+                    if (segDb > -12.0f) zone = meterAmber;
+                    if (segDb > -3.0f)  zone = meterRed;
 
                     auto seg = juce::Rectangle<float> (band.getX() + (float) i * (segW + gap), band.getY() + 2.0f,
                                                         segW, band.getHeight() - 4.0f);
-                    g.setColour (lit ? c : juce::Colours::white.withAlpha (0.07f));
-                    g.fillRoundedRectangle (seg, 1.2f);
+                    if (lit)
+                    {
+                        g.setColour (zone.withAlpha (0.45f));
+                        g.fillRoundedRectangle (seg.expanded (1.3f, 1.6f), 2.0f);
+                        g.setColour (zone);
+                        g.fillRoundedRectangle (seg, 1.2f);
+                    }
+                    else
+                    {
+                        g.setColour (zone.withAlpha (0.16f));
+                        g.fillRoundedRectangle (seg, 1.2f);
+                    }
                 }
 
                 g.setColour (col::text);
@@ -320,11 +354,8 @@ namespace na
                             juce::Justification::centredRight);
             };
 
-            drawBand (inBand, inDbDisp, juce::Colour (0xff5a6680), "INPUT");
-
-            const float s = juce::jlimit (0.0f, 1.0f, airDisp);
-            const auto outCol = juce::Colour (0xff5a6680).interpolatedWith (col::accent, s);
-            drawBand (outBand, outDbDisp, outCol, "OUTPUT");
+            drawBand (inBand, inDbDisp, "INPUT");
+            drawBand (outBand, outDbDisp, "OUTPUT");
 
             g.setColour (col::text);
             g.setFont (juce::Font (9.0f));
