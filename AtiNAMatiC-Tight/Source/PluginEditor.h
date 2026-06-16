@@ -19,6 +19,7 @@ private:
 
     NAMTightProcessor& proc;
     nt::TightLNF       lnf;
+    juce::Image        background;
 
     nt::TitleBadge   titleBadge;
     nt::AboutOverlay aboutOverlay;
