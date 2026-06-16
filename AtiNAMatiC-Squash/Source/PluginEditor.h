@@ -19,6 +19,7 @@ private:
 
     NAMSquashProcessor& proc;
     sq::SquashLNF       lnf;
+    juce::Image          background;
 
     sq::TitleBadge   titleBadge;
     sq::AboutOverlay aboutOverlay;

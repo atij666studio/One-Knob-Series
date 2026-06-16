@@ -66,6 +66,10 @@ juce_add_plugin(AtiNAMatiCSquash
 
 juce_generate_juce_header(AtiNAMatiCSquash)
 
+juce_add_binary_data(AtiNAMatiCSquashData SOURCES
+    Resources/Background.png
+)
+
 target_sources(AtiNAMatiCSquash PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginProcessor.h
@@ -83,6 +87,7 @@ target_compile_definitions(AtiNAMatiCSquash PUBLIC
 )
 
 target_link_libraries(AtiNAMatiCSquash PRIVATE
+    AtiNAMatiCSquashData
     juce::juce_audio_utils
     juce::juce_audio_processors
     juce::juce_audio_basics

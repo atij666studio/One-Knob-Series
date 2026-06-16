@@ -1,4 +1,5 @@
 #include "PluginEditor.h"
+#include <BinaryData.h>
 
 namespace
 {
@@ -9,6 +10,8 @@ namespace
 NAMSquashEditor::NAMSquashEditor (NAMSquashProcessor& p)
     : juce::AudioProcessorEditor (&p), proc (p)
 {
+    background = juce::ImageCache::getFromMemory (BinaryData::Background_png, BinaryData::Background_pngSize);
+
     setLookAndFeel (&lnf);
     setSize (kWidth, kHeight);
 
@@ -99,23 +102,23 @@ NAMSquashEditor::~NAMSquashEditor()
 
 void NAMSquashEditor::paint (juce::Graphics& g)
 {
-    juce::ColourGradient bg (sq::col::bg1, (float) getWidth() * 0.5f, 0.0f,
-                             sq::col::bg0, (float) getWidth() * 0.5f, (float) getHeight(), false);
-    g.setGradientFill (bg);
-    g.fillAll();
+    if (background.isValid())
+    {
+        g.drawImage (background, getLocalBounds().toFloat());
+    }
+    else
+    {
+        juce::ColourGradient bg (sq::col::bg1, (float) getWidth() * 0.5f, 0.0f,
+                                 sq::col::bg0, (float) getWidth() * 0.5f, (float) getHeight(), false);
+        g.setGradientFill (bg);
+        g.fillAll();
+    }
 
-    // Top brand bar
     const int topH = 56;
-    g.setColour (sq::col::panel);
-    g.fillRect (juce::Rectangle<int> (0, 0, getWidth(), topH));
-    g.setColour (sq::col::accent);
-    g.fillRect (0, topH - 1, getWidth(), 1);
-    g.setColour (juce::Colours::black.withAlpha (0.3f));
-    g.fillRect (0, topH, getWidth(), 1);
-
-    // Side accent strip on title
     g.setColour (sq::col::accent);
     g.fillRect (16, 14, 3, topH - 28);
+    g.setColour (sq::col::accent.withAlpha (0.35f));
+    g.fillRect (0, topH - 1, getWidth(), 1);
 }
 
 void NAMSquashEditor::resized()
