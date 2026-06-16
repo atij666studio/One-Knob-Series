@@ -19,6 +19,7 @@ private:
 
     AtiNAMatiCAirProcessor& proc;
     na::AirLNF       lnf;
+    juce::Image      background;
 
     na::AboutOverlay aboutOverlay;
     na::TitleBadge   titleBadge;
