@@ -69,6 +69,10 @@ juce_add_plugin(AtiNAMatiCPick
 
 juce_generate_juce_header(AtiNAMatiCPick)
 
+juce_add_binary_data(AtiNAMatiCPickData SOURCES
+    Resources/Background.png
+)
+
 target_sources(AtiNAMatiCPick PRIVATE
     Source/PluginProcessor.cpp
     Source/PluginProcessor.h
@@ -86,6 +90,7 @@ target_compile_definitions(AtiNAMatiCPick PUBLIC
 )
 
 target_link_libraries(AtiNAMatiCPick PRIVATE
+    AtiNAMatiCPickData
     juce::juce_audio_utils
     juce::juce_audio_processors
     juce::juce_audio_basics

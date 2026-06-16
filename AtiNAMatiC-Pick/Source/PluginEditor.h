@@ -19,6 +19,7 @@ private:
 
     NAMPickProcessor& proc;
     np::PickLNF       lnf;
+    juce::Image       background;
 
     np::TitleBadge   titleBadge;
     np::AboutOverlay aboutOverlay;
