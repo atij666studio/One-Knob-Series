@@ -59,6 +59,10 @@ namespace na
             const auto angle  = startAngle + sliderPos * (endAngle - startAngle);
             const auto accent = slider.findColour (juce::Slider::rotarySliderFillColourId);
 
+            // Glow spread scales down on small knobs -- otherwise a halo sized for
+            // the big 200px knob swallows a thin 60px knob's ring and reads as blur.
+            const auto glowScale = juce::jlimit (0.30f, 1.0f, radius / 95.0f);
+
             // Drop shadow beneath the whole knob.
             g.setColour (juce::Colours::black.withAlpha (0.40f));
             g.fillEllipse (cx - radius, cy - radius + 3.0f, radius * 2.0f, radius * 2.0f);
@@ -88,10 +92,10 @@ namespace na
                 const float sy2 = cy - std::cos (ta) * r2;
                 if (ta <= angle)
                 {
-                    g.setColour (accent.withAlpha (0.35f));
-                    g.drawLine (sx1, sy1, sx2, sy2, 3.2f);
+                    g.setColour (accent.withAlpha (0.30f));
+                    g.drawLine (sx1, sy1, sx2, sy2, 1.6f + 1.6f * glowScale);
                     g.setColour (accent.brighter (0.25f));
-                    g.drawLine (sx1, sy1, sx2, sy2, 1.6f);
+                    g.drawLine (sx1, sy1, sx2, sy2, 1.4f);
                 }
                 else
                 {
@@ -101,7 +105,7 @@ namespace na
             }
 
             // Progress arc track, inset inside the bezel.
-            const auto trackThickness = juce::jmax (5.0f, bezelInner * 0.11f);
+            const auto trackThickness = juce::jmax (4.0f, bezelInner * 0.11f);
             const auto trackR = bezelInner - trackThickness * 0.5f - 3.0f;
 
             juce::Path track;
@@ -112,12 +116,14 @@ namespace na
             juce::Path filled;
             filled.addCentredArc (cx, cy, trackR, trackR, 0.0f, startAngle, angle, true);
 
-            // Layered glow (bloom) behind the lit arc.
-            g.setColour (accent.withAlpha (0.16f));
-            g.strokePath (filled, juce::PathStrokeType (trackThickness * 2.6f, juce::PathStrokeType::curved,
+            // Layered glow (bloom) behind the lit arc -- spread is additive pixels
+            // scaled by glowScale, so it stays proportional instead of swallowing
+            // a thin small-knob ring in haze.
+            g.setColour (accent.withAlpha (0.15f));
+            g.strokePath (filled, juce::PathStrokeType (trackThickness + 8.0f * glowScale, juce::PathStrokeType::curved,
                                                         juce::PathStrokeType::rounded));
-            g.setColour (accent.withAlpha (0.32f));
-            g.strokePath (filled, juce::PathStrokeType (trackThickness * 1.7f, juce::PathStrokeType::curved,
+            g.setColour (accent.withAlpha (0.30f));
+            g.strokePath (filled, juce::PathStrokeType (trackThickness + 3.5f * glowScale, juce::PathStrokeType::curved,
                                                         juce::PathStrokeType::rounded));
 
             juce::ColourGradient grad (accent.brighter (0.05f), cx - trackR, cy,
@@ -126,10 +132,14 @@ namespace na
             g.strokePath (filled, juce::PathStrokeType (trackThickness, juce::PathStrokeType::curved,
                                                         juce::PathStrokeType::rounded));
 
-            // Bright highlight core down the middle of the lit arc.
-            g.setColour (juce::Colours::white.withAlpha (0.35f));
-            g.strokePath (filled, juce::PathStrokeType (trackThickness * 0.32f, juce::PathStrokeType::curved,
-                                                        juce::PathStrokeType::rounded));
+            // Bright highlight core down the middle of the lit arc -- only on rings
+            // thick enough that a translucent core stroke won't just look like mush.
+            if (trackThickness > 6.0f)
+            {
+                g.setColour (juce::Colours::white.withAlpha (0.35f));
+                g.strokePath (filled, juce::PathStrokeType (trackThickness * 0.3f, juce::PathStrokeType::curved,
+                                                            juce::PathStrokeType::rounded));
+            }
 
             // Glossy face.
             const auto inner = trackR - trackThickness * 0.9f;
@@ -155,16 +165,16 @@ namespace na
 
             g.setColour (juce::Colours::black.withAlpha (0.55f));
             g.fillPath (pointer, rot.translated (0.0f, 1.5f));
-            g.setColour (accent.withAlpha (0.35f));
-            g.strokePath (pointer, juce::PathStrokeType (3.0f), rot);
+            g.setColour (accent.withAlpha (0.30f));
+            g.strokePath (pointer, juce::PathStrokeType (1.0f + 2.0f * glowScale), rot);
             g.setColour (accent.brighter (0.35f));
             g.fillPath (pointer, rot);
 
-            const float dotR = juce::jmax (3.0f, inner * 0.08f);
+            const float dotR = juce::jmax (2.5f, inner * 0.08f);
             g.setColour (juce::Colour (0xff05070a));
             g.fillEllipse (cx - dotR, cy - dotR, dotR * 2.0f, dotR * 2.0f);
-            g.setColour (accent.withAlpha (0.5f));
-            g.drawEllipse (cx - dotR, cy - dotR, dotR * 2.0f, dotR * 2.0f, 1.2f);
+            g.setColour (accent.withAlpha (0.85f));
+            g.drawEllipse (cx - dotR, cy - dotR, dotR * 2.0f, dotR * 2.0f, 1.0f);
         }
 
         void drawButtonBackground (juce::Graphics& g, juce::Button& b,
@@ -331,8 +341,9 @@ namespace na
                                                         segW, band.getHeight() - 4.0f);
                     if (lit)
                     {
-                        g.setColour (zone.withAlpha (0.45f));
-                        g.fillRoundedRectangle (seg.expanded (1.3f, 1.6f), 2.0f);
+                        // Glow stays within the gap so adjacent LEDs don't smear together.
+                        g.setColour (zone.withAlpha (0.40f));
+                        g.fillRoundedRectangle (seg.expanded (0.5f, 1.2f), 2.0f);
                         g.setColour (zone);
                         g.fillRoundedRectangle (seg, 1.2f);
                     }
