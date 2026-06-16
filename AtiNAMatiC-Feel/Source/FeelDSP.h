@@ -66,13 +66,14 @@ namespace nf
                 envFast[c]  = 0.0f;
                 envSlow[c]  = 0.0f;
                 envComp[c]  = 0.0f;  // log-domain envelope (in dB, negative below thresh)
-                grLin[c]    = 0.0f;
             }
 
             envIn = envOut = 0.0f;
             grEnv = 0.0f;
             smoothEnv = 0.0f;
-            currentMode = -1;
+
+            outGainSm.reset (sr, 0.02);
+            outGainSm.setCurrentAndTargetValue (1.0f);
         }
 
         void process (juce::AudioBuffer<float>& buffer,
@@ -137,9 +138,7 @@ namespace nf
             const float overRef     = juce::jmax (0.0f, refDb - threshDb);
             const float staticGRdB  = overRef * (1.0f - invRatio);
             const float makeupDb    = staticGRdB * 0.7f;
-            const float outGain     = juce::Decibels::decibelsToGain (makeupDb + outGainDb);
-
-            currentMode = mode;
+            outGainSm.setTargetValue (juce::Decibels::decibelsToGain (makeupDb + outGainDb));
 
             const int chClamp = juce::jmin (numCh, 8);
             float* writePtrs[8] = { nullptr };
@@ -189,6 +188,7 @@ namespace nf
                 envComp[0]   += (gr - envComp[0]) * a;
 
                 const float compGainLin = juce::Decibels::decibelsToGain (envComp[0]);
+                const float outGainNow  = outGainSm.getNextValue();
 
                 // Apply per-channel (same envelope for stereo coherency).
                 for (int c = 0; c < chClamp; ++c)
@@ -196,7 +196,7 @@ namespace nf
                     float x = (c == 0) ? xDet0 : dcBlock.processSample (c, writePtrs[c][i]);
                     x *= trGainLin;
                     x *= compGainLin;
-                    x *= outGain;
+                    x *= outGainNow;
                     writePtrs[c][i] = x;
 
                     if (c == 0)
@@ -234,9 +234,8 @@ namespace nf
         std::array<float, 8> envFast { {} };
         std::array<float, 8> envSlow { {} };
         std::array<float, 8> envComp { {} };  // dB (negative = reduction)
-        std::array<float, 8> grLin   { {} };
 
-        int currentMode { -1 };
+        juce::SmoothedValue<float> outGainSm;
 
         float envIn     { 0.0f };
         float envOut    { 0.0f };
