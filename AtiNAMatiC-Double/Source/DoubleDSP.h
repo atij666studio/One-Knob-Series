@@ -1,7 +1,6 @@
 #pragma once
 
 #include <juce_audio_basics/juce_audio_basics.h>
-#include <juce_dsp/juce_dsp.h>
 #include <atomic>
 #include <cmath>
 #include <random>
@@ -39,7 +38,7 @@ namespace nd
         void prepare (double sr, int blockSize, int numChannels)
         {
             sampleRate = sr;
-            channels   = juce::jmax (1, numChannels);
+            juce::ignoreUnused (numChannels);
 
             // Max delay we ever read at: ~40 ms gives plenty of head room
             // for base delay + drift swing across all modes / widths.
@@ -249,7 +248,6 @@ namespace nd
         int   mask       { 0 };
 
         double sampleRate { 48000.0 };
-        int    channels   { 2 };
 
         float driftSmoothCoeff { 0.0f };
         float widthSmoothCoeff { 0.0f };
