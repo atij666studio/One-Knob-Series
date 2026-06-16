@@ -52,6 +52,7 @@ void NAMSquashProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     const int numCh = juce::jmax (getTotalNumInputChannels(), getTotalNumOutputChannels());
     dsp.prepare (sampleRate, samplesPerBlock, numCh);
+    dryBuffer.setSize (numCh, samplesPerBlock, false, false, true);
 }
 
 void NAMSquashProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
@@ -76,10 +77,9 @@ void NAMSquashProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     dsp.squash.store (squashVal);
     dsp.modeIx.store (modeVal);
 
-    // Save dry for parallel mix
-    juce::AudioBuffer<float> dry (numCh, n);
+    // Save dry for parallel mix (pre-allocated in prepareToPlay -- no audio-thread allocation)
     for (int ch = 0; ch < numCh; ++ch)
-        dry.copyFrom (ch, 0, buffer, ch, 0, n);
+        dryBuffer.copyFrom (ch, 0, buffer, ch, 0, n);
 
     // Compress in-place
     dsp.process (buffer);
@@ -89,7 +89,7 @@ void NAMSquashProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     for (int ch = 0; ch < numCh; ++ch)
     {
         auto*       wp = buffer.getWritePointer (ch);
-        const auto* dp = dry.getReadPointer (ch);
+        const auto* dp = dryBuffer.getReadPointer (ch);
         for (int i = 0; i < n; ++i)
             wp[i] = (dp[i] * (1.0f - mixVal) + wp[i] * mixVal) * outGain;
     }
