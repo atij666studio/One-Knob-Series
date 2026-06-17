@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+﻿cmake_minimum_required(VERSION 3.22)
 
 project(AtiNAMatiCAir VERSION 0.1.0)
 
@@ -24,11 +24,17 @@ endif()
 set(JUCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../AtiNAMatiC/juce-vst3-bridge/JUCE"
     CACHE PATH "Path to JUCE source")
 
-if(NOT EXISTS "${JUCE_PATH}/CMakeLists.txt")
-    message(FATAL_ERROR "JUCE not found at ${JUCE_PATH}. Override -DJUCE_PATH=...")
+if(EXISTS "${JUCE_PATH}/CMakeLists.txt")
+    add_subdirectory("${JUCE_PATH}" JUCE EXCLUDE_FROM_ALL)
+else()
+    message(STATUS "JUCE not found at ${JUCE_PATH} -- fetching 8.0.4 from GitHub")
+    include(FetchContent)
+    FetchContent_Declare(JUCE
+        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+        GIT_TAG        8.0.4
+        GIT_SHALLOW    TRUE)
+    FetchContent_MakeAvailable(JUCE)
 endif()
-
-add_subdirectory("${JUCE_PATH}" JUCE EXCLUDE_FROM_ALL)
 
 # ============================================================================
 # CLAP support — clap-juce-extensions wraps the JUCE plugin as a CLAP target.
@@ -50,6 +56,8 @@ FetchContent_MakeAvailable(clap-juce-extensions)
 # ============================================================================
 if(APPLE)
     set(_FORMATS Standalone VST3 AU)
+elseif(LINUX)
+    set(_FORMATS VST3 LV2)
 else()
     set(_FORMATS Standalone VST3)
 endif()
@@ -70,6 +78,7 @@ juce_add_plugin(AtiNAMatiCAir
     VST3_CATEGORIES         "Fx" "EQ" "Guitar"
     ICON_BIG                "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Air.png"
     ICON_SMALL              "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Air.png"
+    LV2_URI                 "https://atij666studio.com/lv2/atinamatic-air"
 )
 
 juce_generate_juce_header(AtiNAMatiCAir)
@@ -130,16 +139,12 @@ if(TARGET AtiNAMatiCAir_Standalone)
         JUCE_PRODUCT_NAME     "A-Air")
 endif()
 
-# ── Linux system libraries ────────────────────────────────────────────────────
-# Install deps: sudo apt-get install -y libasound2-dev libfreetype-dev
-#   libx11-dev libxext-dev libxrandr-dev libxinerama-dev libxcursor-dev
-#   libgl1-mesa-dev libwebkit2gtk-4.0-dev libgtk-3-dev
+# Linux system libraries (VST3 / CLAP / LV2 plugin builds)
 if(LINUX)
     find_package(PkgConfig REQUIRED)
-    pkg_check_modules(ALSA      REQUIRED alsa)
-    pkg_check_modules(FREETYPE  REQUIRED freetype2)
+    pkg_check_modules(FREETYPE REQUIRED freetype2)
     target_link_libraries(AtiNAMatiCAir PRIVATE
-        ${ALSA_LIBRARIES}
         ${FREETYPE_LIBRARIES}
         dl pthread)
+    target_include_directories(AtiNAMatiCAir PRIVATE ${FREETYPE_INCLUDE_DIRS})
 endif()

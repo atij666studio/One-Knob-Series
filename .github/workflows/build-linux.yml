@@ -1,0 +1,199 @@
+name: Linux Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: linux-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # ============================================================================
+  #  x86_64 — standard desktop / server Linux
+  # ============================================================================
+  build-x86_64:
+    name: Linux x86_64
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            cmake ninja-build build-essential pkg-config git \
+            libasound2-dev libjack-jackd2-dev \
+            libfreetype6-dev libfontconfig1-dev \
+            libgl1-mesa-dev \
+            libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxcomposite-dev libxext-dev \
+            libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Build all plugins
+        run: |
+          PLUGINS=(
+            AtiNAMatiC-Air
+            AtiNAMatiC-Boost
+            AtiNAMatiC-Dirt
+            AtiNAMatiC-Double
+            AtiNAMatiC-Feel
+            AtiNAMatiC-Gate
+            AtiNAMatiC-HitZone
+            AtiNAMatiC-Level
+            AtiNAMatiC-Pick
+            AtiNAMatiC-Squash
+            AtiNAMatiC-Tight
+          )
+          for plugin in "${PLUGINS[@]}"; do
+            echo "::group::Configure $plugin"
+            cmake -S "$plugin" -B "$plugin/build-linux" \
+              -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release
+            echo "::endgroup::"
+            echo "::group::Build $plugin"
+            cmake --build "$plugin/build-linux" --config Release --parallel $(nproc)
+            echo "::endgroup::"
+          done
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist/VST3 dist/CLAP dist/LV2
+          for plugin in AtiNAMatiC-Air AtiNAMatiC-Boost AtiNAMatiC-Dirt AtiNAMatiC-Double \
+                        AtiNAMatiC-Feel AtiNAMatiC-Gate AtiNAMatiC-HitZone AtiNAMatiC-Level \
+                        AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight; do
+            # VST3
+            find "$plugin/build-linux" -maxdepth 6 -type d -name "*.vst3" 2>/dev/null \
+              | while read p; do cp -r "$p" dist/VST3/; done
+            # CLAP
+            find "$plugin/build-linux" -maxdepth 5 -name "*.clap" 2>/dev/null \
+              | while read p; do cp "$p" dist/CLAP/; done
+            # LV2
+            find "$plugin/build-linux" -maxdepth 6 -type d -name "*.lv2" 2>/dev/null \
+              | while read p; do cp -r "$p" dist/LV2/; done
+          done
+          echo "--- VST3 ---"; ls dist/VST3/ || echo "(none)"
+          echo "--- CLAP ---"; ls dist/CLAP/ || echo "(none)"
+          echo "--- LV2  ---"; ls dist/LV2/  || echo "(none)"
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-Linux-x86_64-VST3-r${{ github.run_number }}
+          path: dist/VST3/
+          retention-days: 60
+          if-no-files-found: warn
+
+      - name: Upload CLAP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-Linux-x86_64-CLAP-r${{ github.run_number }}
+          path: dist/CLAP/
+          retention-days: 60
+          if-no-files-found: warn
+
+      - name: Upload LV2
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-Linux-x86_64-LV2-r${{ github.run_number }}
+          path: dist/LV2/
+          retention-days: 60
+          if-no-files-found: warn
+
+  # ============================================================================
+  #  ARM64 — Raspberry Pi 5 / other aarch64 Linux
+  # ============================================================================
+  build-arm64:
+    name: Linux ARM64
+    runs-on: ubuntu-22.04-arm
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y \
+            cmake ninja-build build-essential pkg-config git \
+            gcc-12 g++-12 \
+            libasound2-dev libjack-jackd2-dev \
+            libfreetype6-dev libfontconfig1-dev \
+            libgl1-mesa-dev \
+            libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxcomposite-dev libxext-dev \
+            libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Build all plugins
+        run: |
+          PLUGINS=(
+            AtiNAMatiC-Air
+            AtiNAMatiC-Boost
+            AtiNAMatiC-Dirt
+            AtiNAMatiC-Double
+            AtiNAMatiC-Feel
+            AtiNAMatiC-Gate
+            AtiNAMatiC-HitZone
+            AtiNAMatiC-Level
+            AtiNAMatiC-Pick
+            AtiNAMatiC-Squash
+            AtiNAMatiC-Tight
+          )
+          for plugin in "${PLUGINS[@]}"; do
+            echo "::group::Configure $plugin"
+            cmake -S "$plugin" -B "$plugin/build-linux" \
+              -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_C_COMPILER=gcc-12 \
+              -DCMAKE_CXX_COMPILER=g++-12
+            echo "::endgroup::"
+            echo "::group::Build $plugin"
+            cmake --build "$plugin/build-linux" --config Release --parallel $(nproc)
+            echo "::endgroup::"
+          done
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist/VST3 dist/CLAP dist/LV2
+          for plugin in AtiNAMatiC-Air AtiNAMatiC-Boost AtiNAMatiC-Dirt AtiNAMatiC-Double \
+                        AtiNAMatiC-Feel AtiNAMatiC-Gate AtiNAMatiC-HitZone AtiNAMatiC-Level \
+                        AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight; do
+            find "$plugin/build-linux" -maxdepth 6 -type d -name "*.vst3" 2>/dev/null \
+              | while read p; do cp -r "$p" dist/VST3/; done
+            find "$plugin/build-linux" -maxdepth 5 -name "*.clap" 2>/dev/null \
+              | while read p; do cp "$p" dist/CLAP/; done
+            find "$plugin/build-linux" -maxdepth 6 -type d -name "*.lv2" 2>/dev/null \
+              | while read p; do cp -r "$p" dist/LV2/; done
+          done
+          echo "--- VST3 ---"; ls dist/VST3/ || echo "(none)"
+          echo "--- CLAP ---"; ls dist/CLAP/ || echo "(none)"
+          echo "--- LV2  ---"; ls dist/LV2/  || echo "(none)"
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-Linux-ARM64-VST3-r${{ github.run_number }}
+          path: dist/VST3/
+          retention-days: 60
+          if-no-files-found: warn
+
+      - name: Upload CLAP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-Linux-ARM64-CLAP-r${{ github.run_number }}
+          path: dist/CLAP/
+          retention-days: 60
+          if-no-files-found: warn
+
+      - name: Upload LV2
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-Linux-ARM64-LV2-r${{ github.run_number }}
+          path: dist/LV2/
+          retention-days: 60
+          if-no-files-found: warn

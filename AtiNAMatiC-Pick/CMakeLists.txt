@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+﻿cmake_minimum_required(VERSION 3.22)
 
 project(AtiNAMatiCPick VERSION 0.1.0)
 
@@ -23,11 +23,17 @@ endif()
 set(JUCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../AtiNAMatiC/juce-vst3-bridge/JUCE"
     CACHE PATH "Path to JUCE source")
 
-if(NOT EXISTS "${JUCE_PATH}/CMakeLists.txt")
-    message(FATAL_ERROR "JUCE not found at ${JUCE_PATH}. Override -DJUCE_PATH=...")
+if(EXISTS "${JUCE_PATH}/CMakeLists.txt")
+    add_subdirectory("${JUCE_PATH}" JUCE EXCLUDE_FROM_ALL)
+else()
+    message(STATUS "JUCE not found at ${JUCE_PATH} -- fetching 8.0.4 from GitHub")
+    include(FetchContent)
+    FetchContent_Declare(JUCE
+        GIT_REPOSITORY https://github.com/juce-framework/JUCE.git
+        GIT_TAG        8.0.4
+        GIT_SHALLOW    TRUE)
+    FetchContent_MakeAvailable(JUCE)
 endif()
-
-add_subdirectory("${JUCE_PATH}" JUCE EXCLUDE_FROM_ALL)
 
 # ---- CLAP support -------------------------------------------------------
 include(FetchContent)
@@ -42,6 +48,8 @@ FetchContent_MakeAvailable(clap_juce_extensions)
 # ---- Platform-specific plugin formats -----------------------------------
 if(APPLE)
     set(_FORMATS Standalone VST3 AU)
+elseif(LINUX)
+    set(_FORMATS VST3 LV2)
 else()
     set(_FORMATS Standalone VST3)
 endif()
@@ -65,6 +73,7 @@ juce_add_plugin(AtiNAMatiCPick
     VST3_CATEGORIES          "Fx" "Dynamics" "Guitar"
     ICON_BIG                 "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Pick.png"
     ICON_SMALL               "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Pick.png"
+    LV2_URI                 "https://atij666studio.com/lv2/atinamatic-pick"
 )
 
 juce_generate_juce_header(AtiNAMatiCPick)
@@ -120,4 +129,14 @@ if(TARGET AtiNAMatiCPick_Standalone)
     set_target_properties(AtiNAMatiCPick_Standalone PROPERTIES
         OUTPUT_NAME       "A-Pick"
         JUCE_PRODUCT_NAME "A-Pick")
+endif()
+
+# Linux system libraries (VST3 / CLAP / LV2 plugin builds)
+if(LINUX)
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(FREETYPE REQUIRED freetype2)
+    target_link_libraries(AtiNAMatiCPick PRIVATE
+        ${FREETYPE_LIBRARIES}
+        dl pthread)
+    target_include_directories(AtiNAMatiCPick PRIVATE ${FREETYPE_INCLUDE_DIRS})
 endif()
