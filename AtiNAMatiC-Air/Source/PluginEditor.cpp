@@ -47,14 +47,14 @@ AtiNAMatiCAirEditor::AtiNAMatiCAirEditor (AtiNAMatiCAirProcessor& p)
                 juce::Justification::centred, na::col::text);
 
     setupLabel (dryTickLabel,    "DRY",                              9.0f, true,
-                juce::Justification::centredLeft, na::col::textFaint);
+                juce::Justification::centredLeft, na::col::text);
     setupLabel (midTickLabel,    "AIR",                              9.0f, true,
-                juce::Justification::centred, na::col::textFaint);
+                juce::Justification::centred, na::col::text);
     setupLabel (openTickLabel,   "OPEN",                             9.0f, true,
-                juce::Justification::centredRight, na::col::textFaint);
+                juce::Justification::centredRight, na::col::text);
 
-    setupLabel (mixLabel, "MIX",    10.0f, true, juce::Justification::centred, na::col::textFaint);
-    setupLabel (outLabel, "OUTPUT", 10.0f, true, juce::Justification::centred, na::col::textFaint);
+    setupLabel (mixLabel, "MIX",    10.0f, true, juce::Justification::centred, na::col::text);
+    setupLabel (outLabel, "OUTPUT", 10.0f, true, juce::Justification::centred, na::col::text);
 
     addAndMakeVisible (airHeader);
     addAndMakeVisible (modeHeader);
