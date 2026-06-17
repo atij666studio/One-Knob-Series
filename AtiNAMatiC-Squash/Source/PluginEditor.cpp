@@ -41,19 +41,19 @@ NAMSquashEditor::NAMSquashEditor (NAMSquashProcessor& p)
                 juce::Justification::centredRight, sq::col::textDim);
     setupLabel (squashLabel,    "SQUASH",                   14.0f, true);
     setupLabel (lightTickLabel, "Light",                    10.0f, false,
-                juce::Justification::centredLeft,  sq::col::textFaint);
+                juce::Justification::centredLeft,  sq::col::text);
     setupLabel (heavyTickLabel, "Heavy",                    10.0f, false,
-                juce::Justification::centredRight, sq::col::textFaint);
+                juce::Justification::centredRight, sq::col::text);
     setupLabel (modeLabel,      "MODE",                     10.0f, true,
-                juce::Justification::centredLeft,  sq::col::textFaint);
+                juce::Justification::centredLeft,  sq::col::text);
     setupLabel (mixLabel,       "MIX",                      10.0f, true,
-                juce::Justification::centred,      sq::col::textFaint);
+                juce::Justification::centred,      sq::col::text);
     setupLabel (outLabel,       "OUTPUT",                   10.0f, true,
-                juce::Justification::centred,      sq::col::textFaint);
+                juce::Justification::centred,      sq::col::text);
     setupLabel (grCaption,      "GR",                       10.0f, true,
-                juce::Justification::centredLeft,  sq::col::textFaint);
+                juce::Justification::centredLeft,  sq::col::text);
     setupLabel (grMaxLabel,     "18 dB",                    10.0f, false,
-                juce::Justification::centredRight, sq::col::textFaint);
+                juce::Justification::centredRight, sq::col::text);
 
     auto setupRotary = [this] (juce::Slider& s)
     {

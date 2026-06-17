@@ -356,7 +356,7 @@ namespace sq
                                              .withHeight (22.0f).withStyle ("Bold"));
             juce::AttributedString as;
             as.setJustification (juce::Justification::centredLeft);
-            as.append ("AtiNAMatiC", f, col::text.withAlpha (0.70f));
+            as.append ("AtiNAMatiC", f, col::text.withAlpha (0.88f));
             as.append ("-Squash",    f, col::accent);
             juce::TextLayout tl;
             tl.createLayout (as, (float) getWidth());
