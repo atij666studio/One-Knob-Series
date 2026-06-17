@@ -79,9 +79,11 @@ namespace na
             const float macroClamped = juce::jlimit (0.0f, 1.0f, macro);
 
             // ---- Macro mapping ------------------------------------------
-            // Window length: 600 ms (Soft) -> 120 ms (Locked).
+            // Window length: 600 ms (Soft) -> 250 ms (Locked).
             // Smaller window = faster RMS response = more aggressive.
-            const double winSec   = 0.600 - 0.480 * (double) macroClamped;
+            // Floor is 250 ms (not 120 ms) so the leveler tracks sustained
+            // level drift, not individual note envelopes.
+            const double winSec   = 0.600 - 0.350 * (double) macroClamped;
             const int    winSize  = juce::jlimit (32,
                                                   (int) sqBuf.size() - 4,
                                                   (int) std::round (sampleRate * winSec));
@@ -98,9 +100,11 @@ namespace na
 
             // Attack/release time constants. Attack faster than release.
             // Soft   : att 250 ms, rel 1500 ms
-            // Locked : att  20 ms, rel  150 ms
+            // Locked : att  20 ms, rel  400 ms
+            // Release floor raised to 400 ms (was 150 ms) so gain restores
+            // gradually after ducking — prevents audible pump/breathe on guitar.
             const double attMs = 250.0 - 230.0 * (double) macroClamped;
-            const double relMs = 1500.0 - 1350.0 * (double) macroClamped;
+            const double relMs = 1500.0 - 1100.0 * (double) macroClamped;
             const float  attA  = (float) (1.0 - std::exp (-1.0 / (0.001 * attMs * sampleRate)));
             const float  relA  = (float) (1.0 - std::exp (-1.0 / (0.001 * relMs * sampleRate)));
 
@@ -161,6 +165,10 @@ namespace na
 
                 // Below noise floor → don't try to lift silence.
                 if (rms < 1.0e-4f) corrDb = 0.0f;
+
+                // Deadband: ignore corrections smaller than 1 dB so the leveler
+                // doesn't chase minor fluctuations (which sounds wavy/pumpy).
+                if (std::abs (corrDb) < 1.0f) corrDb = 0.0f;
 
                 const float targetGain = juce::Decibels::decibelsToGain (corrDb);
 

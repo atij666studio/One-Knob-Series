@@ -47,13 +47,13 @@ NAMLevelEditor::NAMLevelEditor (NAMLevelProcessor& p)
                 juce::Justification::centred, na::col::text);
 
     setupLabel (softTickLabel,   "SOFT",                             9.0f, true,
-                juce::Justification::centredLeft, na::col::textFaint);
+                juce::Justification::centredLeft, na::col::text);
     setupLabel (midTickLabel,    "HOLD",                             9.0f, true,
-                juce::Justification::centred, na::col::textFaint);
+                juce::Justification::centred, na::col::text);
     setupLabel (lockedTickLabel, "LOCKED",                           9.0f, true,
-                juce::Justification::centredRight, na::col::textFaint);
+                juce::Justification::centredRight, na::col::text);
 
-    setupLabel (trimLabel, "TRIM", 10.0f, true, juce::Justification::centred, na::col::textFaint);
+    setupLabel (trimLabel, "TRIM", 10.0f, true, juce::Justification::centred, na::col::text);
 
     addAndMakeVisible (levelHeader);
     addAndMakeVisible (autoHeader);
