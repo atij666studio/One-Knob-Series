@@ -42,17 +42,17 @@ NAMTightEditor::NAMTightEditor (NAMTightProcessor& p)
                 juce::Justification::centredRight, nt::col::textDim);
     setupLabel (tightLabel,      "TIGHT",                                14.0f, true);
     setupLabel (looseTickLabel,  "Loose",                                10.0f, false,
-                juce::Justification::centredLeft,  nt::col::textFaint);
+                juce::Justification::centredLeft,  nt::col::text);
     setupLabel (tightTickLabel,  "Tight",                                10.0f, false,
-                juce::Justification::centredRight, nt::col::textFaint);
+                juce::Justification::centredRight, nt::col::text);
     setupLabel (modeLabel,       "MODE",                                 10.0f, true,
-                juce::Justification::centredLeft,  nt::col::textFaint);
+                juce::Justification::centredLeft,  nt::col::text);
     setupLabel (mixLabel,        "MIX",                                  10.0f, true,
-                juce::Justification::centred,      nt::col::textFaint);
+                juce::Justification::centred,      nt::col::text);
     setupLabel (outLabel,        "OUTPUT",                               10.0f, true,
-                juce::Justification::centred,      nt::col::textFaint);
+                juce::Justification::centred,      nt::col::text);
     setupLabel (meterCaption,    "LOW END",                              10.0f, true,
-                juce::Justification::centredLeft,  nt::col::textFaint);
+                juce::Justification::centredLeft,  nt::col::text);
 
     auto setupRotary = [this] (juce::Slider& s, juce::Slider::Listener* /*l*/)
     {
