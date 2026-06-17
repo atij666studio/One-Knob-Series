@@ -70,7 +70,7 @@ juce_add_plugin(AtiNAMatiCSquash
     VST3_CATEGORIES          "Fx" "Dynamics"
     ICON_BIG                 "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Squash.png"
     ICON_SMALL               "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Squash.png"
-    LV2_URI                 "https://atij666studio.com/lv2/atinamatic-squash"
+    LV2URI                 "https://atij666studio.com/lv2/atinamatic-squash"
 )
 
 juce_generate_juce_header(AtiNAMatiCSquash)

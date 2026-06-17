@@ -74,7 +74,7 @@ juce_add_plugin(AtiNAMatiCTight
     VST3_CATEGORIES          "Fx" "EQ" "Guitar"
     ICON_BIG                 "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Tight.png"
     ICON_SMALL               "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Tight.png"
-    LV2_URI                 "https://atij666studio.com/lv2/atinamatic-tight"
+    LV2URI                 "https://atij666studio.com/lv2/atinamatic-tight"
 )
 
 juce_generate_juce_header(AtiNAMatiCTight)

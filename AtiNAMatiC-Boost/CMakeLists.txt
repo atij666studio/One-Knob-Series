@@ -75,7 +75,7 @@ juce_add_plugin(AtiNAMatiCBoost
     COPY_PLUGIN_AFTER_BUILD FALSE
     MICROPHONE_PERMISSION_ENABLED TRUE
     VST3_CATEGORIES         "Fx" "Distortion" "Guitar"
-    LV2_URI                 "https://atij666studio.com/lv2/atinamatic-boost"
+    LV2URI                 "https://atij666studio.com/lv2/atinamatic-boost"
 )
 
 juce_generate_juce_header(AtiNAMatiCBoost)

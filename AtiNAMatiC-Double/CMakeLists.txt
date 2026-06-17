@@ -73,7 +73,7 @@ juce_add_plugin(AtiNAMatiCDouble
     VST3_CATEGORIES          "Fx" "Stereo" "Guitar"
     ICON_BIG                 "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Double.png"
     ICON_SMALL               "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Double.png"
-    LV2_URI                 "https://atij666studio.com/lv2/atinamatic-double"
+    LV2URI                 "https://atij666studio.com/lv2/atinamatic-double"
 )
 
 clap_juce_extensions_plugin(

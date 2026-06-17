@@ -70,7 +70,7 @@ juce_add_plugin(AtiNAMatiCFeel
     VST3_CATEGORIES          "Fx" "Dynamics" "Guitar"
     ICON_BIG                 "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Feel.png"
     ICON_SMALL               "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Feel.png"
-    LV2_URI                 "https://atij666studio.com/lv2/atinamatic-feel"
+    LV2URI                 "https://atij666studio.com/lv2/atinamatic-feel"
 )
 
 clap_juce_extensions_plugin(

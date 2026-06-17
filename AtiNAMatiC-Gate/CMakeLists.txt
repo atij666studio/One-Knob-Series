@@ -73,7 +73,7 @@ juce_add_plugin(AtiNAMatiCGate
     VST3_CATEGORIES          "Fx" "Dynamics" "Guitar"
     ICON_BIG                 "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Gate.png"
     ICON_SMALL               "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Gate.png"
-    LV2_URI                 "https://atij666studio.com/lv2/atinamatic-gate"
+    LV2URI                 "https://atij666studio.com/lv2/atinamatic-gate"
 )
 
 juce_generate_juce_header(AtiNAMatiCGate)

@@ -76,7 +76,7 @@ juce_add_plugin(AtiNAMatiCHitZone
     VST3_CATEGORIES         "Fx" "Dynamics" "Guitar"
     ICON_BIG                "${CMAKE_CURRENT_SOURCE_DIR}/Resources/HitZone.png"
     ICON_SMALL              "${CMAKE_CURRENT_SOURCE_DIR}/Resources/HitZone.png"
-    LV2_URI                 "https://atij666studio.com/lv2/atinamatic-hitzone"
+    LV2URI                 "https://atij666studio.com/lv2/atinamatic-hitzone"
 )
 
 juce_generate_juce_header(AtiNAMatiCHitZone)

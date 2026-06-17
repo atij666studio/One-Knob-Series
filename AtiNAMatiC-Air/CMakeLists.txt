@@ -78,7 +78,7 @@ juce_add_plugin(AtiNAMatiCAir
     VST3_CATEGORIES         "Fx" "EQ" "Guitar"
     ICON_BIG                "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Air.png"
     ICON_SMALL              "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Air.png"
-    LV2_URI                 "https://atij666studio.com/lv2/atinamatic-air"
+    LV2URI                 "https://atij666studio.com/lv2/atinamatic-air"
 )
 
 juce_generate_juce_header(AtiNAMatiCAir)

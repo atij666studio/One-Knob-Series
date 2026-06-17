@@ -73,7 +73,7 @@ juce_add_plugin(AtiNAMatiCPick
     VST3_CATEGORIES          "Fx" "Dynamics" "Guitar"
     ICON_BIG                 "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Pick.png"
     ICON_SMALL               "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Pick.png"
-    LV2_URI                 "https://atij666studio.com/lv2/atinamatic-pick"
+    LV2URI                 "https://atij666studio.com/lv2/atinamatic-pick"
 )
 
 juce_generate_juce_header(AtiNAMatiCPick)

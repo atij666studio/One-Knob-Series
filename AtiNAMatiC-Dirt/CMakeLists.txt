@@ -78,7 +78,7 @@ juce_add_plugin(AtiNAMatiCDirt
     VST3_CATEGORIES         "Fx" "Distortion" "Guitar"
     ICON_BIG                "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Dirt.png"
     ICON_SMALL              "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Dirt.png"
-    LV2_URI                 "https://atij666studio.com/lv2/atinamatic-dirt"
+    LV2URI                 "https://atij666studio.com/lv2/atinamatic-dirt"
 )
 
 juce_generate_juce_header(AtiNAMatiCDirt)

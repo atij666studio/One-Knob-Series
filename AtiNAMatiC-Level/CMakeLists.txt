@@ -75,7 +75,7 @@ juce_add_plugin(AtiNAMatiCLevel
     ICON_SMALL              "${CMAKE_CURRENT_SOURCE_DIR}/Resources/Level.png"
     MICROPHONE_PERMISSION_ENABLED TRUE
     VST3_CATEGORIES         "Fx" "Dynamics" "Guitar"
-    LV2_URI                 "https://atij666studio.com/lv2/atinamatic-level"
+    LV2URI                 "https://atij666studio.com/lv2/atinamatic-level"
 )
 
 clap_juce_extensions_plugin(
