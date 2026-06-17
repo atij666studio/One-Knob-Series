@@ -42,13 +42,13 @@ NAMFeelEditor::NAMFeelEditor (NAMFeelProcessor& p)
                 juce::Justification::centred, nf::col::text);
 
     setupLabel (rawTickLabel,    "RAW",                                9.0f, true,
-                juce::Justification::centredLeft, nf::col::textFaint);
+                juce::Justification::centredLeft, nf::col::text);
     setupLabel (midTickLabel,    "FEEL",                               9.0f, true,
-                juce::Justification::centred, nf::col::textFaint);
+                juce::Justification::centred, nf::col::text);
     setupLabel (smoothTickLabel, "SMOOTH",                             9.0f, true,
-                juce::Justification::centredRight, nf::col::textFaint);
+                juce::Justification::centredRight, nf::col::text);
 
-    setupLabel (outLabel, "OUTPUT", 10.0f, true, juce::Justification::centred, nf::col::textFaint);
+    setupLabel (outLabel, "OUTPUT", 10.0f, true, juce::Justification::centred, nf::col::text);
 
     addAndMakeVisible (assistHeader);
     addAndMakeVisible (modeHeader);
