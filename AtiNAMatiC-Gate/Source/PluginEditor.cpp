@@ -45,16 +45,16 @@ NAMGateEditor::NAMGateEditor (NAMGateProcessor& p)
                 juce::Justification::centred, ng::col::text);
 
     setupLabel (openTickLabel,     "OPEN",                               9.0f, true,
-                juce::Justification::centredLeft, ng::col::textFaint);
+                juce::Justification::centredLeft, ng::col::text);
     setupLabel (trackingTickLabel, "TRACKING",                           9.0f, true,
-                juce::Justification::centred, ng::col::textFaint);
+                juce::Justification::centred, ng::col::text);
     setupLabel (tightTickLabel,    "TIGHT",                              9.0f, true,
-                juce::Justification::centredRight, ng::col::textFaint);
+                juce::Justification::centredRight, ng::col::text);
 
     setupLabel (mixLabel,          "MIX",                                10.0f, true,
-                juce::Justification::centred, ng::col::textFaint);
+                juce::Justification::centred, ng::col::text);
     setupLabel (outLabel,          "OUTPUT",                             10.0f, true,
-                juce::Justification::centred, ng::col::textFaint);
+                juce::Justification::centred, ng::col::text);
 
     addAndMakeVisible (gateHeader);
     addAndMakeVisible (modeHeader);
