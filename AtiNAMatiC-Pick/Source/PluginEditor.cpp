@@ -46,12 +46,12 @@ NAMPickEditor::NAMPickEditor (NAMPickProcessor& p)
     setupLabel (softTickLabel,    "SOFT",                         9.0f, true,
                 juce::Justification::centredLeft,  np::col::accentSoft);
     setupLabel (neutralTickLabel, "NEUTRAL",                      9.0f, true,
-                juce::Justification::centred,      np::col::textFaint);
+                juce::Justification::centred,      np::col::text);
     setupLabel (sharpTickLabel,   "SHARP",                        9.0f, true,
                 juce::Justification::centredRight, np::col::accentSharp);
 
-    setupLabel (mixLabel, "MIX",    10.0f, true, juce::Justification::centred, np::col::textFaint);
-    setupLabel (outLabel, "OUTPUT", 10.0f, true, juce::Justification::centred, np::col::textFaint);
+    setupLabel (mixLabel, "MIX",    10.0f, true, juce::Justification::centred, np::col::text);
+    setupLabel (outLabel, "OUTPUT", 10.0f, true, juce::Justification::centred, np::col::text);
 
     addAndMakeVisible (attackHeader);
     addAndMakeVisible (meterHeader);

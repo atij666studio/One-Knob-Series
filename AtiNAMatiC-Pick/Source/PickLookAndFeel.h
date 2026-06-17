@@ -217,7 +217,7 @@ namespace np
                                              .withStyle ("Bold"));
             juce::AttributedString as;
             as.setJustification (juce::Justification::centredLeft);
-            as.append ("AtiNAMatiC", f, col::text.withAlpha (0.70f));
+            as.append ("AtiNAMatiC", f, col::text.withAlpha (0.88f));
             as.append ("-Pick",      f, col::accent);
             juce::TextLayout tl;
             tl.createLayout (as, (float) getWidth());
@@ -380,7 +380,7 @@ namespace np
         void paint (juce::Graphics& g) override
         {
             auto r = getLocalBounds().toFloat();
-            g.setColour (col::textFaint);
+            g.setColour (col::text);
             g.setFont (juce::Font ("Helvetica Neue", 10.0f, juce::Font::bold));
             g.drawText (text.toUpperCase(),
                         r.removeFromTop (14.0f).toNearestInt(),
