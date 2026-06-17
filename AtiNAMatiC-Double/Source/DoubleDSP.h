@@ -62,10 +62,10 @@ namespace nd
                 v->currentDelay = 0.0f;
             }
 
-            // Random-walk smoothing: a 1-pole LPF whose corner is well
-            // below 1 Hz so the resulting pitch derivative stays in the
-            // ±10 cent zone the user asked for.
-            driftSmoothCoeff = 1.0f - std::exp (-1.0f / (float) (sr * 0.45));
+            // Random-walk smoothing: very long 3 s tau keeps the pitch
+            // derivative well under 5 cents at all times — human-sounding
+            // timing wander, not chorus LFO.
+            driftSmoothCoeff = 1.0f - std::exp (-1.0f / (float) (sr * 3.0));
 
             // Output level smoothers (avoid mode/knob clicks)
             widthSmoothCoeff = 1.0f - std::exp (-1.0f / (float) (sr * 0.030));
@@ -169,13 +169,13 @@ namespace nd
                 {
                     voiceA.driftTarget = nextSignedRandom();
                     voiceA.samplesUntilNewTarget =
-                        (int) (sampleRate * (0.45f + 1.10f * nextUnitRandom()));
+                        (int) (sampleRate * (4.0f + 8.0f * nextUnitRandom()));
                 }
                 if (--voiceB.samplesUntilNewTarget <= 0)
                 {
                     voiceB.driftTarget = nextSignedRandom();
                     voiceB.samplesUntilNewTarget =
-                        (int) (sampleRate * (0.55f + 1.30f * nextUnitRandom()));
+                        (int) (sampleRate * (5.0f + 9.0f * nextUnitRandom()));
                 }
                 voiceA.driftSmoothed +=
                     (voiceA.driftTarget - voiceA.driftSmoothed) * driftSmoothCoeff;
