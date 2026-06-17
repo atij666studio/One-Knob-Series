@@ -44,7 +44,7 @@ AtiNAMatiCHitZoneEditor::AtiNAMatiCHitZoneEditor (AtiNAMatiCHitZoneProcessor& p)
     // About overlay — hidden until badge is clicked
     addChildComponent (aboutOverlay);
 
-    styleLabel (sweetLabel,    "SWEET SPOT", 11.0f, juce::Justification::centred, nhz::col::textDim);
+    styleLabel (sweetLabel,    "SWEET SPOT", 11.0f, juce::Justification::centred, nhz::col::text);
     sweetLabel.setFont (juce::Font (juce::FontOptions (11.0f).withStyle ("Bold")).withExtraKerningFactor (0.25f));
 
     styleLabel (coldLabel,     "COLD",       10.0f, juce::Justification::centredLeft,  nhz::col::cold);
@@ -55,11 +55,11 @@ AtiNAMatiCHitZoneEditor::AtiNAMatiCHitZoneEditor (AtiNAMatiCHitZoneProcessor& p)
     styleLabel (statusLabel,   "Perfect",    20.0f, juce::Justification::centred, nhz::col::green);
     statusLabel.setFont (juce::Font (juce::FontOptions (20.0f).withStyle ("Bold")));
 
-    styleLabel (gainReadout,   "0.0 dB",     10.0f, juce::Justification::centred, nhz::col::textFaint);
+    styleLabel (gainReadout,   "0.0 dB",     10.0f, juce::Justification::centred, nhz::col::text);
 
-    styleLabel (mixLabel,      "MIX",        10.0f, juce::Justification::centred, nhz::col::textDim);
-    styleLabel (outLabel,      "OUTPUT",     10.0f, juce::Justification::centred, nhz::col::textDim);
-    styleLabel (responseLabel, "RESPONSE",   10.0f, juce::Justification::centred, nhz::col::textDim);
+    styleLabel (mixLabel,      "MIX",        10.0f, juce::Justification::centred, nhz::col::text);
+    styleLabel (outLabel,      "OUTPUT",     10.0f, juce::Justification::centred, nhz::col::text);
+    styleLabel (responseLabel, "RESPONSE",   10.0f, juce::Justification::centred, nhz::col::text);
     for (auto* l : { &mixLabel, &outLabel, &responseLabel })
         l->setFont (juce::Font (juce::FontOptions (10.0f).withStyle ("Bold")).withExtraKerningFactor (0.25f));
 
@@ -160,7 +160,7 @@ void AtiNAMatiCHitZoneEditor::paint (juce::Graphics& g)
 
     // Tagline
     g.setFont (juce::Font (juce::FontOptions (10.0f).withStyle ("Italic")));
-    g.setColour (nhz::col::textFaint.withAlpha (0.8f));
+    g.setColour (nhz::col::text.withAlpha (0.8f));
     g.drawText ("Always Hit the Perfect Level",
                 (int) top.getX(), (int) top.getBottom() - 16, (int) top.getWidth(), 13,
                 juce::Justification::centred, false);
