@@ -43,14 +43,14 @@ NAMDirtEditor::NAMDirtEditor (NAMDirtProcessor& p)
                 juce::Justification::centred, nd::col::text);
 
     setupLabel (cleanTickLabel,  "CLEAN",                            9.0f, true,
-                juce::Justification::centredLeft, nd::col::textFaint);
+                juce::Justification::centredLeft, nd::col::text);
     setupLabel (midTickLabel,    "EDGE",                             9.0f, true,
-                juce::Justification::centred, nd::col::textFaint);
+                juce::Justification::centred, nd::col::text);
     setupLabel (gritTickLabel,   "GRIT",                             9.0f, true,
-                juce::Justification::centredRight, nd::col::textFaint);
+                juce::Justification::centredRight, nd::col::text);
 
-    setupLabel (mixLabel, "MIX",    10.0f, true, juce::Justification::centred, nd::col::textFaint);
-    setupLabel (outLabel, "OUTPUT", 10.0f, true, juce::Justification::centred, nd::col::textFaint);
+    setupLabel (mixLabel, "MIX",    10.0f, true, juce::Justification::centred, nd::col::text);
+    setupLabel (outLabel, "OUTPUT", 10.0f, true, juce::Justification::centred, nd::col::text);
 
     addAndMakeVisible (dirtHeader);
     addAndMakeVisible (typeHeader);
