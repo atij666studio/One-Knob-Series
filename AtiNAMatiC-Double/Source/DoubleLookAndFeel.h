@@ -274,7 +274,7 @@ namespace nd
         void paint (juce::Graphics& g) override
         {
             auto r = getLocalBounds().toFloat();
-            g.setColour (col::textFaint);
+            g.setColour (col::text);
             g.setFont (juce::Font ("Helvetica Neue", 10.0f, juce::Font::bold));
             g.drawText (text.toUpperCase(),
                         r.removeFromTop (14.0f).toNearestInt(),

@@ -42,16 +42,16 @@ NAMDoubleEditor::NAMDoubleEditor (NAMDoubleProcessor& p)
                 juce::Justification::centred, nd::col::text);
 
     setupLabel (monoTickLabel,     "MONO",                               9.0f, true,
-                juce::Justification::centredLeft, nd::col::textFaint);
+                juce::Justification::centredLeft, nd::col::text);
     setupLabel (doubleTickLabel,   "DOUBLE",                             9.0f, true,
-                juce::Justification::centred, nd::col::textFaint);
+                juce::Justification::centred, nd::col::text);
     setupLabel (wideTickLabel,     "WIDE",                               9.0f, true,
-                juce::Justification::centredRight, nd::col::textFaint);
+                juce::Justification::centredRight, nd::col::text);
 
     setupLabel (mixLabel,          "MIX",                                10.0f, true,
-                juce::Justification::centred, nd::col::textFaint);
+                juce::Justification::centred, nd::col::text);
     setupLabel (outLabel,          "OUTPUT",                             10.0f, true,
-                juce::Justification::centred, nd::col::textFaint);
+                juce::Justification::centred, nd::col::text);
 
     addAndMakeVisible (widthHeader);
     addAndMakeVisible (modeHeader);
