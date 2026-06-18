@@ -103,6 +103,14 @@ if ($Config -eq "Release") {
         Write-Host "Bundle: CLAP not built yet (run cmake configure first)" -ForegroundColor Yellow
     }
 
-    Write-Host ""
-    Write-Host "Installer\Bundle\ is ready - run ISCC.exe on Installer\AtiNAMatiC-Air.iss to build the installer." -ForegroundColor Green
+    $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+    if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
+    if (Test-Path $iscc) {
+        Write-Host "Building installer..." -ForegroundColor Cyan
+        & $iscc (Join-Path $ScriptDir "Installer\AtiNAMatiC-Air.iss")
+        if ($LASTEXITCODE -eq 0) { Write-Host "  -> Installer\Output\" -ForegroundColor Green }
+        else { Write-Warning "ISCC failed (exit $LASTEXITCODE)" }
+    } else {
+        Write-Host "Inno Setup not found - run: ISCC.exe Installer\AtiNAMatiC-Air.iss" -ForegroundColor DarkGray
+    }
 }

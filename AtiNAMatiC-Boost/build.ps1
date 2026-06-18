@@ -71,10 +71,38 @@ if (Test-Path $clapSrc)
 }
 
 # ------------------------------------------------------------------
-# Done
+# Populate Installer\Bundle\ for Inno Setup packaging
 # ------------------------------------------------------------------
+if ($Config -eq "Release") {
+    $bundleDir = Join-Path $root "Installer\Bundle"
+    New-Item -ItemType Directory -Force -Path $bundleDir | Out-Null
+
+    $vst3BundleDst = Join-Path $bundleDir "AtiNAMatiC-Boost.vst3"
+    if (Test-Path $vst3Src) {
+        if (Test-Path $vst3BundleDst) { Remove-Item -Recurse -Force $vst3BundleDst }
+        Copy-Item -Recurse -Force $vst3Src $bundleDir
+        Write-Host "Bundle: copied AtiNAMatiC-Boost.vst3/" -ForegroundColor DarkCyan
+    }
+
+    if (Test-Path $clapSrc) {
+        Copy-Item -Force $clapSrc $bundleDir
+        Write-Host "Bundle: copied AtiNAMatiC-Boost.clap" -ForegroundColor DarkCyan
+    }
+
+    # Build installer if Inno Setup is present
+    $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+    if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
+    if (Test-Path $iscc) {
+        Write-Host "Building installer..." -ForegroundColor Cyan
+        & $iscc (Join-Path $root "Installer\AtiNAMatiC-Boost.iss")
+        if ($LASTEXITCODE -ne 0) { Write-Warning "ISCC failed (exit $LASTEXITCODE)" }
+        else { Write-Host "  -> Installer\Output\AtiNAMatiC-Boost-Setup-$Config.exe" -ForegroundColor Green }
+    } else {
+        Write-Host "Inno Setup not found - run manually: ISCC.exe Installer\AtiNAMatiC-Boost.iss" -ForegroundColor DarkGray
+    }
+}
+
 Write-Host ""
 Write-Host "Build OK." -ForegroundColor Green
-Write-Host "Standalone : $artefacts\Standalone\A-Boost.exe"
 Write-Host "VST3       : $vst3Dst"
 Write-Host "CLAP       : $clapDst"

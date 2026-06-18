@@ -110,6 +110,14 @@ if ($Config -eq "Release") {
         Write-Host "Bundle: CLAP not built (run cmake configure first)" -ForegroundColor Yellow
     }
 
-    Write-Host ""
-    Write-Host "Installer\Bundle\ ready - run ISCC.exe on Installer\AtiNAMatiC-Double.iss to package." -ForegroundColor Green
+    $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+    if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
+    if (Test-Path $iscc) {
+        Write-Host "Building installer..." -ForegroundColor Cyan
+        & $iscc (Join-Path $ScriptDir "Installer\AtiNAMatiC-Double.iss")
+        if ($LASTEXITCODE -eq 0) { Write-Host "  -> Installer\Output\" -ForegroundColor Green }
+        else { Write-Warning "ISCC failed (exit $LASTEXITCODE)" }
+    } else {
+        Write-Host "Inno Setup not found - run: ISCC.exe Installer\AtiNAMatiC-Double.iss" -ForegroundColor DarkGray
+    }
 }

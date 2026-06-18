@@ -62,5 +62,16 @@ if (Test-Path $clapSrc) {
     Write-Host "  -> CLAP copied to Bundle" -ForegroundColor Green
 }
 
+$iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
+if (Test-Path $iscc) {
+    Write-Host "Building installer..." -ForegroundColor Cyan
+    & $iscc (Join-Path $Root "Installer\AtiNAMatiC-Tight.iss")
+    if ($LASTEXITCODE -eq 0) { Write-Host "  -> Installer\Output\" -ForegroundColor Green }
+    else { Write-Warning "ISCC failed (exit $LASTEXITCODE)" }
+} else {
+    Write-Host "Inno Setup not found - run: ISCC.exe Installer\AtiNAMatiC-Tight.iss" -ForegroundColor DarkGray
+}
+
 Write-Host ""
-Write-Host "Build complete. Rescan your DAW to pick up the new VST3." -ForegroundColor Yellow
+Write-Host "Build complete. Rescan your DAW to pick up the new plugins." -ForegroundColor Yellow
