@@ -1,4 +1,5 @@
 build/
 .DS_Store
-Installer/
+**/Installer/*/
+**/Installer/*.zip
 *.log

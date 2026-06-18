@@ -81,6 +81,40 @@ jobs:
           echo "--- CLAP ---"; ls dist/CLAP/ || echo "(none)"
           echo "--- LV2  ---"; ls dist/LV2/  || echo "(none)"
 
+      - name: Create installer tarball
+        run: |
+          cat > dist/install.sh << 'INSTALL_EOF'
+          #!/usr/bin/env bash
+          # ONE-KNOB Series Linux Installer
+          # Usage: ./install.sh           # installs to ~/.vst3, ~/.clap, ~/.lv2
+          #        ./install.sh --system  # installs to /usr/lib/vst3 etc. (needs sudo)
+          set -e
+          SCOPE="user"
+          [[ "${1:-}" == "--system" ]] && SCOPE="system"
+          if [[ "$SCOPE" == "system" ]]; then
+            VST3_DIR=/usr/lib/vst3; CLAP_DIR=/usr/lib/clap; LV2_DIR=/usr/lib/lv2
+          else
+            VST3_DIR="$HOME/.vst3"; CLAP_DIR="$HOME/.clap"; LV2_DIR="$HOME/.lv2"
+          fi
+          mkdir -p "$VST3_DIR" "$CLAP_DIR" "$LV2_DIR"
+          DIR="$(cd "$(dirname "$0")" && pwd)"
+          for bundle in "$DIR"/VST3/*.vst3; do [[ -d "$bundle" ]] && cp -r "$bundle" "$VST3_DIR/" && echo "  VST3: $(basename "$bundle") -> $VST3_DIR"; done
+          for clap   in "$DIR"/CLAP/*.clap;   do [[ -f "$clap"   ]] && cp    "$clap"   "$CLAP_DIR/" && echo "  CLAP: $(basename "$clap")   -> $CLAP_DIR"; done
+          for bundle in "$DIR"/LV2/*.lv2;    do [[ -d "$bundle" ]] && cp -r "$bundle" "$LV2_DIR/"  && echo "  LV2:  $(basename "$bundle") -> $LV2_DIR";  done
+          echo ""
+          echo "Done. Rescan plug-ins in your DAW to pick up the new plugins."
+          INSTALL_EOF
+          chmod +x dist/install.sh
+          tar -czf ONE-KNOB-Linux-x86_64-r${{ github.run_number }}.tar.gz -C dist .
+
+      - name: Upload installer tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-Linux-x86_64-r${{ github.run_number }}
+          path: ONE-KNOB-Linux-x86_64-r${{ github.run_number }}.tar.gz
+          retention-days: 60
+          if-no-files-found: warn
+
       - name: Upload VST3
         uses: actions/upload-artifact@v4
         with:
@@ -173,6 +207,40 @@ jobs:
           echo "--- VST3 ---"; ls dist/VST3/ || echo "(none)"
           echo "--- CLAP ---"; ls dist/CLAP/ || echo "(none)"
           echo "--- LV2  ---"; ls dist/LV2/  || echo "(none)"
+
+      - name: Create installer tarball
+        run: |
+          cat > dist/install.sh << 'INSTALL_EOF'
+          #!/usr/bin/env bash
+          # ONE-KNOB Series Linux Installer
+          # Usage: ./install.sh           # installs to ~/.vst3, ~/.clap, ~/.lv2
+          #        ./install.sh --system  # installs to /usr/lib/vst3 etc. (needs sudo)
+          set -e
+          SCOPE="user"
+          [[ "${1:-}" == "--system" ]] && SCOPE="system"
+          if [[ "$SCOPE" == "system" ]]; then
+            VST3_DIR=/usr/lib/vst3; CLAP_DIR=/usr/lib/clap; LV2_DIR=/usr/lib/lv2
+          else
+            VST3_DIR="$HOME/.vst3"; CLAP_DIR="$HOME/.clap"; LV2_DIR="$HOME/.lv2"
+          fi
+          mkdir -p "$VST3_DIR" "$CLAP_DIR" "$LV2_DIR"
+          DIR="$(cd "$(dirname "$0")" && pwd)"
+          for bundle in "$DIR"/VST3/*.vst3; do [[ -d "$bundle" ]] && cp -r "$bundle" "$VST3_DIR/" && echo "  VST3: $(basename "$bundle") -> $VST3_DIR"; done
+          for clap   in "$DIR"/CLAP/*.clap;   do [[ -f "$clap"   ]] && cp    "$clap"   "$CLAP_DIR/" && echo "  CLAP: $(basename "$clap")   -> $CLAP_DIR"; done
+          for bundle in "$DIR"/LV2/*.lv2;    do [[ -d "$bundle" ]] && cp -r "$bundle" "$LV2_DIR/"  && echo "  LV2:  $(basename "$bundle") -> $LV2_DIR";  done
+          echo ""
+          echo "Done. Rescan plug-ins in your DAW to pick up the new plugins."
+          INSTALL_EOF
+          chmod +x dist/install.sh
+          tar -czf ONE-KNOB-Linux-ARM64-r${{ github.run_number }}.tar.gz -C dist .
+
+      - name: Upload installer tarball
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-Linux-ARM64-r${{ github.run_number }}
+          path: ONE-KNOB-Linux-ARM64-r${{ github.run_number }}.tar.gz
+          retention-days: 60
+          if-no-files-found: warn
 
       - name: Upload VST3
         uses: actions/upload-artifact@v4
