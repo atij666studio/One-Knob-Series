@@ -2,8 +2,8 @@
 ;  AtiNAMatiC-Air -- Inno Setup script (VST3 + CLAP only)
 ;  Atij 666 Studio
 ;
-;  Workflow: run build.ps1 (Release) -> populates Installer\Bundle\
-;            then: ISCC.exe AtiNAMatiC-Air.iss
+;  Workflow: cmake build Release -> ISCC.exe AtiNAMatiC-Air.iss
+;            (sources directly from cmake artefacts, no Bundle copy needed)
 ; ============================================================================
 
 #define MyAppName        "AtiNAMatiC-Air"
@@ -13,7 +13,7 @@
 #define MyClapName       "AtiNAMatiC-Air.clap"
 #define MyManualName     "AtiNAMatiC-Air-Manual.md"
 #define ProjectRoot      ".."
-#define Bundle           ProjectRoot + "\Installer\Bundle"
+#define Arts             ProjectRoot + "\build\AtiNAMatiCAir_artefacts\Release"
 
 [Setup]
 AppId={{B6F2C4D8-8A1E-4F1D-9B3A-A7C7E0E4A111}
@@ -69,13 +69,13 @@ Name: "clap"; Description: "CLAP plug-in (for your DAW)"; Types: full custom; Fl
 
 [Files]
 ; ---- VST3 (whole bundle, recurse) -----------------------------------------
-Source: "{#Bundle}\AtiNAMatiC-Air.vst3\*"; \
+Source: "{#Arts}\VST3\AtiNAMatiC-Air.vst3\*"; \
     DestDir: "{commoncf64}\VST3\AtiNAMatiC-Air.vst3"; \
     Flags: ignoreversion recursesubdirs createallsubdirs; \
     Components: vst3
 
 ; ---- CLAP ------------------------------------------------------------------
-Source: "{#Bundle}\{#MyClapName}"; \
+Source: "{#Arts}\CLAP\{#MyClapName}"; \
     DestDir: "{commoncf64}\CLAP"; \
     Flags: ignoreversion; Components: clap
 

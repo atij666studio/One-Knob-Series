@@ -2,8 +2,8 @@
 ;  AtiNAMatiC-Pick -- Inno Setup script (VST3 + CLAP only)
 ;  Atij 666 Studio
 ;
-;  Workflow: run build.ps1 (Release) -> populates Installer\Bundle\
-;            then: ISCC.exe AtiNAMatiC-Pick.iss
+;  Workflow: cmake build Release -> ISCC.exe AtiNAMatiC-Pick.iss
+;            (sources directly from cmake artefacts, no Bundle copy needed)
 ; ============================================================================
 
 #define MyAppName        "AtiNAMatiC-Pick"
@@ -13,7 +13,7 @@
 #define MyClapName       "AtiNAMatiC-Pick.clap"
 #define MyManualName     "AtiNAMatiC-Pick-Manual.md"
 #define ProjectRoot      ".."
-#define Bundle           ProjectRoot + "\Installer\Bundle"
+#define Arts             ProjectRoot + "\build\AtiNAMatiCPick_artefacts\Release"
 
 [Setup]
 AppId={{5520C687-6689-42D0-8CEA-2676EBE707BB}
@@ -69,13 +69,13 @@ Name: "clap"; Description: "CLAP plug-in (for your DAW)"; Types: full custom; Fl
 
 [Files]
 ; ---- VST3 (whole bundle, recurse) -----------------------------------------
-Source: "{#Bundle}\AtiNAMatiC-Pick.vst3\*"; \
+Source: "{#Arts}\VST3\AtiNAMatiC-Pick.vst3\*"; \
     DestDir: "{commoncf64}\VST3\AtiNAMatiC-Pick.vst3"; \
     Flags: ignoreversion recursesubdirs createallsubdirs; \
     Components: vst3
 
 ; ---- CLAP ------------------------------------------------------------------
-Source: "{#Bundle}\{#MyClapName}"; \
+Source: "{#Arts}\CLAP\{#MyClapName}"; \
     DestDir: "{commoncf64}\CLAP"; \
     Flags: ignoreversion; Components: clap
 

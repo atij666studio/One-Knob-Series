@@ -2,8 +2,8 @@
 ;  AtiNAMatiC-Gate -- Inno Setup script (VST3 + CLAP only)
 ;  Atij 666 Studio
 ;
-;  Workflow: run build.ps1 (Release) -> populates Installer\Bundle\
-;            then: ISCC.exe AtiNAMatiC-Gate.iss
+;  Workflow: cmake build Release -> ISCC.exe AtiNAMatiC-Gate.iss
+;            (sources directly from cmake artefacts, no Bundle copy needed)
 ; ============================================================================
 
 #define MyAppName        "AtiNAMatiC-Gate"
@@ -13,7 +13,7 @@
 #define MyClapName       "AtiNAMatiC-Gate.clap"
 #define MyManualName     "AtiNAMatiC-Gate-Manual.md"
 #define ProjectRoot      ".."
-#define Bundle           ProjectRoot + "\Installer\Bundle"
+#define Arts             ProjectRoot + "\build\AtiNAMatiCGate_artefacts\Release"
 
 [Setup]
 AppId={{B1BEF6FC-399E-4CA7-A7E0-450D32048688}
@@ -69,13 +69,13 @@ Name: "clap"; Description: "CLAP plug-in (for your DAW)"; Types: full custom; Fl
 
 [Files]
 ; ---- VST3 (whole bundle, recurse) -----------------------------------------
-Source: "{#Bundle}\AtiNAMatiC-Gate.vst3\*"; \
+Source: "{#Arts}\VST3\AtiNAMatiC-Gate.vst3\*"; \
     DestDir: "{commoncf64}\VST3\AtiNAMatiC-Gate.vst3"; \
     Flags: ignoreversion recursesubdirs createallsubdirs; \
     Components: vst3
 
 ; ---- CLAP ------------------------------------------------------------------
-Source: "{#Bundle}\{#MyClapName}"; \
+Source: "{#Arts}\CLAP\{#MyClapName}"; \
     DestDir: "{commoncf64}\CLAP"; \
     Flags: ignoreversion; Components: clap
 

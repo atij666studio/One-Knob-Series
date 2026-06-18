@@ -2,8 +2,8 @@
 ;  AtiNAMatiC-Dirt -- Inno Setup script (VST3 + CLAP only)
 ;  Atij 666 Studio
 ;
-;  Workflow: run build.ps1 (Release) -> populates Installer\Bundle\
-;            then: ISCC.exe AtiNAMatiC-Dirt.iss
+;  Workflow: cmake build Release -> ISCC.exe AtiNAMatiC-Dirt.iss
+;            (sources directly from cmake artefacts, no Bundle copy needed)
 ; ============================================================================
 
 #define MyAppName        "AtiNAMatiC-Dirt"
@@ -13,7 +13,7 @@
 #define MyClapName       "AtiNAMatiC-Dirt.clap"
 #define MyManualName     "AtiNAMatiC-Dirt-Manual.md"
 #define ProjectRoot      ".."
-#define Bundle           ProjectRoot + "\Installer\Bundle"
+#define Arts             ProjectRoot + "\build\AtiNAMatiCDirt_artefacts\Release"
 
 [Setup]
 AppId={{C3A17E5F-2B4D-4E8A-9F6C-D1B8E2F5A222}
@@ -69,13 +69,13 @@ Name: "clap"; Description: "CLAP plug-in (for your DAW)"; Types: full custom; Fl
 
 [Files]
 ; ---- VST3 (whole bundle, recurse) -----------------------------------------
-Source: "{#Bundle}\AtiNAMatiC-Dirt.vst3\*"; \
+Source: "{#Arts}\VST3\AtiNAMatiC-Dirt.vst3\*"; \
     DestDir: "{commoncf64}\VST3\AtiNAMatiC-Dirt.vst3"; \
     Flags: ignoreversion recursesubdirs createallsubdirs; \
     Components: vst3
 
 ; ---- CLAP ------------------------------------------------------------------
-Source: "{#Bundle}\{#MyClapName}"; \
+Source: "{#Arts}\CLAP\{#MyClapName}"; \
     DestDir: "{commoncf64}\CLAP"; \
     Flags: ignoreversion; Components: clap
 

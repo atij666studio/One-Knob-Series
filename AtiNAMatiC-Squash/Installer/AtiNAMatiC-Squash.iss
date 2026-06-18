@@ -2,8 +2,8 @@
 ;  AtiNAMatiC-Squash -- Inno Setup script (VST3 + CLAP only)
 ;  Atij 666 Studio
 ;
-;  Workflow: run build.ps1 (Release) -> populates Installer\Bundle\
-;            then: ISCC.exe AtiNAMatiC-Squash.iss
+;  Workflow: cmake build Release -> ISCC.exe AtiNAMatiC-Squash.iss
+;            (sources directly from cmake artefacts, no Bundle copy needed)
 ; ============================================================================
 
 #define MyAppName        "AtiNAMatiC-Squash"
@@ -13,7 +13,7 @@
 #define MyClapName       "AtiNAMatiC-Squash.clap"
 #define MyManualName     "AtiNAMatiC-Squash-Manual.md"
 #define ProjectRoot      ".."
-#define Bundle           ProjectRoot + "\Installer\Bundle"
+#define Arts             ProjectRoot + "\build\AtiNAMatiCSquash_artefacts\Release"
 
 [Setup]
 AppId={{DFF3BC0C-8E5B-4D73-B11F-DC91ADED0BD7}
@@ -69,13 +69,13 @@ Name: "clap"; Description: "CLAP plug-in (for your DAW)"; Types: full custom; Fl
 
 [Files]
 ; ---- VST3 -----------------------------------------------------------------
-Source: "{#Bundle}\AtiNAMatiC-Squash.vst3\*"; \
+Source: "{#Arts}\VST3\AtiNAMatiC-Squash.vst3\*"; \
     DestDir: "{commoncf64}\VST3\AtiNAMatiC-Squash.vst3"; \
     Flags: ignoreversion recursesubdirs createallsubdirs; \
     Components: vst3
 
 ; ---- CLAP -----------------------------------------------------------------
-Source: "{#Bundle}\{#MyClapName}"; \
+Source: "{#Arts}\CLAP\{#MyClapName}"; \
     DestDir: "{commoncf64}\CLAP"; \
     Flags: ignoreversion; Components: clap
 

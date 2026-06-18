@@ -2,8 +2,8 @@
 ;  AtiNAMatiC-Tight -- Inno Setup script (VST3 + CLAP only)
 ;  Atij 666 Studio
 ;
-;  Workflow: run build.ps1 (Release) -> populates Installer\Bundle\
-;            then: ISCC.exe AtiNAMatiC-Tight.iss
+;  Workflow: cmake build Release -> ISCC.exe AtiNAMatiC-Tight.iss
+;            (sources directly from cmake artefacts, no Bundle copy needed)
 ; ============================================================================
 
 #define MyAppName        "AtiNAMatiC-Tight"
@@ -13,7 +13,7 @@
 #define MyClapName       "AtiNAMatiC-Tight.clap"
 #define MyManualName     "AtiNAMatiC-Tight-Manual.md"
 #define ProjectRoot      ".."
-#define Bundle           ProjectRoot + "\Installer\Bundle"
+#define Arts             ProjectRoot + "\build\AtiNAMatiCTight_artefacts\Release"
 
 [Setup]
 AppId={{2BA45815-F7D8-4F18-AC04-DCB0751A9035}
@@ -69,13 +69,13 @@ Name: "clap"; Description: "CLAP plug-in (for your DAW)"; Types: full custom; Fl
 
 [Files]
 ; ---- VST3 (whole bundle, recurse) -----------------------------------------
-Source: "{#Bundle}\AtiNAMatiC-Tight.vst3\*"; \
+Source: "{#Arts}\VST3\AtiNAMatiC-Tight.vst3\*"; \
     DestDir: "{commoncf64}\VST3\AtiNAMatiC-Tight.vst3"; \
     Flags: ignoreversion recursesubdirs createallsubdirs; \
     Components: vst3
 
 ; ---- CLAP ------------------------------------------------------------------
-Source: "{#Bundle}\{#MyClapName}"; \
+Source: "{#Arts}\CLAP\{#MyClapName}"; \
     DestDir: "{commoncf64}\CLAP"; \
     Flags: ignoreversion; Components: clap
 

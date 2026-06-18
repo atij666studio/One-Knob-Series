@@ -2,8 +2,8 @@
 ;  AtiNAMatiC-Level -- Inno Setup script (VST3 + CLAP only)
 ;  Atij 666 Studio
 ;
-;  Workflow: run build.ps1 (Release) -> populates Installer\Bundle\
-;            then: ISCC.exe AtiNAMatiC-Level.iss
+;  Workflow: cmake build Release -> ISCC.exe AtiNAMatiC-Level.iss
+;            (sources directly from cmake artefacts, no Bundle copy needed)
 ; ============================================================================
 
 #define MyAppName        "AtiNAMatiC-Level"
@@ -13,7 +13,7 @@
 #define MyClapName       "AtiNAMatiC-Level.clap"
 #define MyManualName     "AtiNAMatiC-Level-Manual.md"
 #define ProjectRoot      ".."
-#define Bundle           ProjectRoot + "\Installer\Bundle"
+#define Arts             ProjectRoot + "\build\AtiNAMatiCLevel_artefacts\Release"
 
 [Setup]
 AppId={{C2A7F1B3-85D4-4E09-A3F6-1D8E5B0C9247}
@@ -69,13 +69,13 @@ Name: "clap"; Description: "CLAP plug-in (for your DAW)"; Types: full custom; Fl
 
 [Files]
 ; ---- VST3 (whole bundle, recurse) -----------------------------------------
-Source: "{#Bundle}\AtiNAMatiC-Level.vst3\*"; \
+Source: "{#Arts}\VST3\AtiNAMatiC-Level.vst3\*"; \
     DestDir: "{commoncf64}\VST3\AtiNAMatiC-Level.vst3"; \
     Flags: ignoreversion recursesubdirs createallsubdirs; \
     Components: vst3
 
 ; ---- CLAP ------------------------------------------------------------------
-Source: "{#Bundle}\{#MyClapName}"; \
+Source: "{#Arts}\CLAP\{#MyClapName}"; \
     DestDir: "{commoncf64}\CLAP"; \
     Flags: ignoreversion; Components: clap
 

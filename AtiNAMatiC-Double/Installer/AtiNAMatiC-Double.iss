@@ -2,8 +2,8 @@
 ;  AtiNAMatiC-Double -- Inno Setup script (VST3 + CLAP only)
 ;  Atij 666 Studio
 ;
-;  Workflow: run build.ps1 (Release) -> populates Installer\Bundle\
-;            then: ISCC.exe AtiNAMatiC-Double.iss
+;  Workflow: cmake build Release -> ISCC.exe AtiNAMatiC-Double.iss
+;            (sources directly from cmake artefacts, no Bundle copy needed)
 ; ============================================================================
 
 #define MyAppName        "AtiNAMatiC-Double"
@@ -13,7 +13,7 @@
 #define MyClapName       "AtiNAMatiC-Double.clap"
 #define MyManualName     "AtiNAMatiC-Double-Manual.md"
 #define ProjectRoot      ".."
-#define Bundle           ProjectRoot + "\Installer\Bundle"
+#define Arts             ProjectRoot + "\build\AtiNAMatiCDouble_artefacts\Release"
 
 [Setup]
 AppId={{E8E62D21-1B17-4111-BFF7-7B2F7C969892}
@@ -69,13 +69,13 @@ Name: "clap"; Description: "CLAP plug-in (for your DAW)"; Types: full custom; Fl
 
 [Files]
 ; ---- VST3 (whole bundle, recurse) -----------------------------------------
-Source: "{#Bundle}\AtiNAMatiC-Double.vst3\*"; \
+Source: "{#Arts}\VST3\AtiNAMatiC-Double.vst3\*"; \
     DestDir: "{commoncf64}\VST3\AtiNAMatiC-Double.vst3"; \
     Flags: ignoreversion recursesubdirs createallsubdirs; \
     Components: vst3
 
 ; ---- CLAP ------------------------------------------------------------------
-Source: "{#Bundle}\{#MyClapName}"; \
+Source: "{#Arts}\CLAP\{#MyClapName}"; \
     DestDir: "{commoncf64}\CLAP"; \
     Flags: ignoreversion; Components: clap
 

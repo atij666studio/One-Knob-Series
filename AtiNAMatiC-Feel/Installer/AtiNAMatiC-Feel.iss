@@ -2,8 +2,8 @@
 ;  AtiNAMatiC-Feel -- Inno Setup script (VST3 + CLAP only)
 ;  Atij 666 Studio
 ;
-;  Workflow: run build.ps1 (Release) -> populates Installer\Bundle\
-;            then: ISCC.exe AtiNAMatiC-Feel.iss
+;  Workflow: cmake build Release -> ISCC.exe AtiNAMatiC-Feel.iss
+;            (sources directly from cmake artefacts, no Bundle copy needed)
 ; ============================================================================
 
 #define MyAppName        "AtiNAMatiC-Feel"
@@ -13,7 +13,7 @@
 #define MyClapName       "AtiNAMatiC-Feel.clap"
 #define MyManualName     "AtiNAMatiC-Feel-Manual.md"
 #define ProjectRoot      ".."
-#define Bundle           ProjectRoot + "\Installer\Bundle"
+#define Arts             ProjectRoot + "\build\AtiNAMatiCFeel_artefacts\Release"
 
 [Setup]
 AppId={{45923B6F-01C1-44F4-B681-F4BDF23D56F4}
@@ -69,13 +69,13 @@ Name: "clap"; Description: "CLAP plug-in (for your DAW)"; Types: full custom; Fl
 
 [Files]
 ; ---- VST3 (whole bundle, recurse) -----------------------------------------
-Source: "{#Bundle}\AtiNAMatiC-Feel.vst3\*"; \
+Source: "{#Arts}\VST3\AtiNAMatiC-Feel.vst3\*"; \
     DestDir: "{commoncf64}\VST3\AtiNAMatiC-Feel.vst3"; \
     Flags: ignoreversion recursesubdirs createallsubdirs; \
     Components: vst3
 
 ; ---- CLAP ------------------------------------------------------------------
-Source: "{#Bundle}\{#MyClapName}"; \
+Source: "{#Arts}\CLAP\{#MyClapName}"; \
     DestDir: "{commoncf64}\CLAP"; \
     Flags: ignoreversion; Components: clap
 

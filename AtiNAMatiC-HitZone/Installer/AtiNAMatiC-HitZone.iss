@@ -2,8 +2,8 @@
 ;  AtiNAMatiC-HitZone -- Inno Setup script (VST3 + CLAP only)
 ;  Atij 666 Studio
 ;
-;  Workflow: run build.ps1 (Release) -> populates Installer\Bundle\
-;            then: ISCC.exe AtiNAMatiC-HitZone.iss
+;  Workflow: cmake build Release -> ISCC.exe AtiNAMatiC-HitZone.iss
+;            (sources directly from cmake artefacts, no Bundle copy needed)
 ; ============================================================================
 
 #define MyAppName        "AtiNAMatiC-HitZone"
@@ -13,7 +13,7 @@
 #define MyClapName       "AtiNAMatiC-HitZone.clap"
 #define MyManualName     "AtiNAMatiC-HitZone-Manual.md"
 #define ProjectRoot      ".."
-#define Bundle           ProjectRoot + "\Installer\Bundle"
+#define Arts             ProjectRoot + "\build\AtiNAMatiCHitZone_artefacts\Release"
 
 [Setup]
 AppId={{9709C327-38FD-4F1F-942E-62BAE2AEF0CD}
@@ -69,13 +69,13 @@ Name: "clap"; Description: "CLAP plug-in (for your DAW)"; Types: full custom; Fl
 
 [Files]
 ; ---- VST3 (whole bundle, recurse) -----------------------------------------
-Source: "{#Bundle}\AtiNAMatiC-HitZone.vst3\*"; \
+Source: "{#Arts}\VST3\AtiNAMatiC-HitZone.vst3\*"; \
     DestDir: "{commoncf64}\VST3\AtiNAMatiC-HitZone.vst3"; \
     Flags: ignoreversion recursesubdirs createallsubdirs; \
     Components: vst3
 
 ; ---- CLAP ------------------------------------------------------------------
-Source: "{#Bundle}\{#MyClapName}"; \
+Source: "{#Arts}\CLAP\{#MyClapName}"; \
     DestDir: "{commoncf64}\CLAP"; \
     Flags: ignoreversion; Components: clap
 
