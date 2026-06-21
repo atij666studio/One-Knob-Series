@@ -1,0 +1,263 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  # ── Windows ──────────────────────────────────────────────────────────────────
+  windows:
+    name: Windows x64
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Inno Setup 6
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build all plugins
+        shell: pwsh
+        run: |
+          $plugins = @(
+            'AtiNAMatiC-Air','AtiNAMatiC-Boost','AtiNAMatiC-Dirt',
+            'AtiNAMatiC-Double','AtiNAMatiC-Feel','AtiNAMatiC-Gate',
+            'AtiNAMatiC-HitZone','AtiNAMatiC-Level','AtiNAMatiC-Pick',
+            'AtiNAMatiC-Squash','AtiNAMatiC-Tight'
+          )
+          foreach ($p in $plugins) {
+            cmake -S $p -B "$p/build" -G "Visual Studio 17 2022" -A x64
+            cmake --build "$p/build" --config Release --parallel
+          }
+
+      - name: Build installers
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          foreach ($n in @('Air','Boost','Dirt','Double','Feel','Gate','HitZone','Level','Pick','Squash','Tight')) {
+            & $iscc "AtiNAMatiC-$n\Installer\AtiNAMatiC-$n.iss"
+          }
+
+      - name: Collect and zip
+        shell: pwsh
+        run: |
+          $null = New-Item -ItemType Directory -Force dist/VST3, dist/CLAP, dist/Installers
+          $map = @(
+            @{N='Air';T='AtiNAMatiCAir'}, @{N='Boost';T='AtiNAMatiCBoost'},
+            @{N='Dirt';T='AtiNAMatiCDirt'}, @{N='Double';T='AtiNAMatiCDouble'},
+            @{N='Feel';T='AtiNAMatiCFeel'}, @{N='Gate';T='AtiNAMatiCGate'},
+            @{N='HitZone';T='AtiNAMatiCHitZone'}, @{N='Level';T='AtiNAMatiCLevel'},
+            @{N='Pick';T='AtiNAMatiCPick'}, @{N='Squash';T='AtiNAMatiCSquash'},
+            @{N='Tight';T='AtiNAMatiCTight'}
+          )
+          foreach ($e in $map) {
+            $arts = "AtiNAMatiC-$($e.N)\build\$($e.T)_artefacts\Release"
+            if (Test-Path "$arts\VST3\AtiNAMatiC-$($e.N).vst3") {
+              Copy-Item -Recurse "$arts\VST3\AtiNAMatiC-$($e.N).vst3" dist/VST3/
+            }
+            if (Test-Path "$arts\CLAP\AtiNAMatiC-$($e.N).clap") {
+              Copy-Item "$arts\CLAP\AtiNAMatiC-$($e.N).clap" dist/CLAP/
+            }
+            $exe = Get-ChildItem "AtiNAMatiC-$($e.N)\Installer\Output\*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($exe) { Copy-Item $exe.FullName dist/Installers/ }
+          }
+          Compress-Archive -Path dist/VST3/*      -DestinationPath windows-vst3.zip
+          Compress-Archive -Path dist/CLAP/*      -DestinationPath windows-clap.zip
+          Compress-Archive -Path dist/Installers/* -DestinationPath windows-installers.zip
+
+      - uses: actions/upload-artifact@v4
+        with: { name: win-vst3,       path: windows-vst3.zip }
+      - uses: actions/upload-artifact@v4
+        with: { name: win-clap,       path: windows-clap.zip }
+      - uses: actions/upload-artifact@v4
+        with: { name: win-installers, path: windows-installers.zip }
+
+  # ── macOS ─────────────────────────────────────────────────────────────────────
+  macos:
+    name: macOS Universal
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: brew install cmake ninja
+
+      - name: Build all plugins
+        run: |
+          for p in AtiNAMatiC-Air AtiNAMatiC-Boost AtiNAMatiC-Dirt AtiNAMatiC-Double \
+                   AtiNAMatiC-Feel AtiNAMatiC-Gate AtiNAMatiC-HitZone AtiNAMatiC-Level \
+                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight; do
+            cmake -S "$p" -B "$p/build" -G Ninja -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+              -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15
+            cmake --build "$p/build" --parallel $(sysctl -n hw.logicalcpu)
+          done
+
+      - name: Collect and zip
+        run: |
+          mkdir -p dist/VST3 dist/CLAP dist/AU
+          declare -A T=([Air]=AtiNAMatiCAir [Boost]=AtiNAMatiCBoost [Dirt]=AtiNAMatiCDirt
+            [Double]=AtiNAMatiCDouble [Feel]=AtiNAMatiCFeel [Gate]=AtiNAMatiCGate
+            [HitZone]=AtiNAMatiCHitZone [Level]=AtiNAMatiCLevel [Pick]=AtiNAMatiCPick
+            [Squash]=AtiNAMatiCSquash [Tight]=AtiNAMatiCTight)
+          for n in "${!T[@]}"; do
+            a="AtiNAMatiC-$n/build/${T[$n]}_artefacts/Release"
+            [ -d "$a/VST3/AtiNAMatiC-$n.vst3" ]    && cp -r "$a/VST3/AtiNAMatiC-$n.vst3"    dist/VST3/
+            [ -f "$a/CLAP/AtiNAMatiC-$n.clap" ]    && cp    "$a/CLAP/AtiNAMatiC-$n.clap"    dist/CLAP/
+            [ -d "$a/AU/AtiNAMatiC-$n.component" ] && cp -r "$a/AU/AtiNAMatiC-$n.component" dist/AU/
+          done
+          cd dist && zip -r ../macos-vst3.zip VST3/ && zip -r ../macos-clap.zip CLAP/ && zip -r ../macos-au.zip AU/
+
+      - uses: actions/upload-artifact@v4
+        with: { name: mac-vst3, path: macos-vst3.zip }
+      - uses: actions/upload-artifact@v4
+        with: { name: mac-clap, path: macos-clap.zip }
+      - uses: actions/upload-artifact@v4
+        with: { name: mac-au,   path: macos-au.zip }
+
+  # ── Linux x86_64 ─────────────────────────────────────────────────────────────
+  linux-x86_64:
+    name: Linux x86_64
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y cmake ninja-build build-essential pkg-config git \
+            libasound2-dev libjack-jackd2-dev libfreetype6-dev libfontconfig1-dev \
+            libgl1-mesa-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxcomposite-dev libxext-dev \
+            libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Build all plugins
+        run: |
+          for p in AtiNAMatiC-Air AtiNAMatiC-Boost AtiNAMatiC-Dirt AtiNAMatiC-Double \
+                   AtiNAMatiC-Feel AtiNAMatiC-Gate AtiNAMatiC-HitZone AtiNAMatiC-Level \
+                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight; do
+            cmake -S "$p" -B "$p/build" -G Ninja -DCMAKE_BUILD_TYPE=Release
+            cmake --build "$p/build" --parallel $(nproc)
+          done
+
+      - name: Collect + create installer tarball
+        run: |
+          mkdir -p dist/VST3 dist/CLAP dist/LV2
+          for p in AtiNAMatiC-Air AtiNAMatiC-Boost AtiNAMatiC-Dirt AtiNAMatiC-Double \
+                   AtiNAMatiC-Feel AtiNAMatiC-Gate AtiNAMatiC-HitZone AtiNAMatiC-Level \
+                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight; do
+            find "$p/build" -maxdepth 6 -type d -name "*.vst3" | while read b; do cp -r "$b" dist/VST3/; done
+            find "$p/build" -maxdepth 5 -name "*.clap"         | while read b; do cp    "$b" dist/CLAP/; done
+            find "$p/build" -maxdepth 6 -type d -name "*.lv2"  | while read b; do cp -r "$b" dist/LV2/;  done
+          done
+          cat > dist/install.sh << 'EOF'
+          #!/usr/bin/env bash
+          set -e
+          SCOPE="user"
+          [[ "${1:-}" == "--system" ]] && SCOPE="system"
+          if [[ "$SCOPE" == "system" ]]; then
+            VST3_DIR=/usr/lib/vst3; CLAP_DIR=/usr/lib/clap; LV2_DIR=/usr/lib/lv2
+          else
+            VST3_DIR="$HOME/.vst3"; CLAP_DIR="$HOME/.clap"; LV2_DIR="$HOME/.lv2"
+          fi
+          mkdir -p "$VST3_DIR" "$CLAP_DIR" "$LV2_DIR"
+          DIR="$(cd "$(dirname "$0")" && pwd)"
+          for b in "$DIR"/VST3/*.vst3; do [[ -d "$b" ]] && cp -r "$b" "$VST3_DIR/" && echo "  VST3: $(basename $b)"; done
+          for b in "$DIR"/CLAP/*.clap;  do [[ -f "$b" ]] && cp    "$b" "$CLAP_DIR/" && echo "  CLAP: $(basename $b)"; done
+          for b in "$DIR"/LV2/*.lv2;   do [[ -d "$b" ]] && cp -r "$b" "$LV2_DIR/"  && echo "  LV2:  $(basename $b)"; done
+          echo "Done. Rescan plug-ins in your DAW."
+          EOF
+          chmod +x dist/install.sh
+          tar -czf linux-x86_64.tar.gz -C dist .
+
+      - uses: actions/upload-artifact@v4
+        with: { name: linux-x86_64, path: linux-x86_64.tar.gz }
+
+  # ── Linux ARM64 ───────────────────────────────────────────────────────────────
+  linux-arm64:
+    name: Linux ARM64
+    runs-on: ubuntu-22.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y cmake ninja-build build-essential pkg-config git \
+            gcc-12 g++-12 \
+            libasound2-dev libjack-jackd2-dev libfreetype6-dev libfontconfig1-dev \
+            libgl1-mesa-dev libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxcomposite-dev libxext-dev \
+            libgtk-3-dev libwebkit2gtk-4.1-dev
+
+      - name: Build all plugins
+        run: |
+          for p in AtiNAMatiC-Air AtiNAMatiC-Boost AtiNAMatiC-Dirt AtiNAMatiC-Double \
+                   AtiNAMatiC-Feel AtiNAMatiC-Gate AtiNAMatiC-HitZone AtiNAMatiC-Level \
+                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight; do
+            cmake -S "$p" -B "$p/build" -G Ninja -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12
+            cmake --build "$p/build" --parallel $(nproc)
+          done
+
+      - name: Collect + create installer tarball
+        run: |
+          mkdir -p dist/VST3 dist/CLAP dist/LV2
+          for p in AtiNAMatiC-Air AtiNAMatiC-Boost AtiNAMatiC-Dirt AtiNAMatiC-Double \
+                   AtiNAMatiC-Feel AtiNAMatiC-Gate AtiNAMatiC-HitZone AtiNAMatiC-Level \
+                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight; do
+            find "$p/build" -maxdepth 6 -type d -name "*.vst3" | while read b; do cp -r "$b" dist/VST3/; done
+            find "$p/build" -maxdepth 5 -name "*.clap"         | while read b; do cp    "$b" dist/CLAP/; done
+            find "$p/build" -maxdepth 6 -type d -name "*.lv2"  | while read b; do cp -r "$b" dist/LV2/;  done
+          done
+          cat > dist/install.sh << 'EOF'
+          #!/usr/bin/env bash
+          set -e
+          SCOPE="user"
+          [[ "${1:-}" == "--system" ]] && SCOPE="system"
+          if [[ "$SCOPE" == "system" ]]; then
+            VST3_DIR=/usr/lib/vst3; CLAP_DIR=/usr/lib/clap; LV2_DIR=/usr/lib/lv2
+          else
+            VST3_DIR="$HOME/.vst3"; CLAP_DIR="$HOME/.clap"; LV2_DIR="$HOME/.lv2"
+          fi
+          mkdir -p "$VST3_DIR" "$CLAP_DIR" "$LV2_DIR"
+          DIR="$(cd "$(dirname "$0")" && pwd)"
+          for b in "$DIR"/VST3/*.vst3; do [[ -d "$b" ]] && cp -r "$b" "$VST3_DIR/" && echo "  VST3: $(basename $b)"; done
+          for b in "$DIR"/CLAP/*.clap;  do [[ -f "$b" ]] && cp    "$b" "$CLAP_DIR/" && echo "  CLAP: $(basename $b)"; done
+          for b in "$DIR"/LV2/*.lv2;   do [[ -d "$b" ]] && cp -r "$b" "$LV2_DIR/"  && echo "  LV2:  $(basename $b)"; done
+          echo "Done. Rescan plug-ins in your DAW."
+          EOF
+          chmod +x dist/install.sh
+          tar -czf linux-arm64.tar.gz -C dist .
+
+      - uses: actions/upload-artifact@v4
+        with: { name: linux-arm64, path: linux-arm64.tar.gz }
+
+  # ── GitHub Release ────────────────────────────────────────────────────────────
+  publish:
+    name: Publish Release
+    needs: [windows, macos, linux-x86_64, linux-arm64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts/
+
+      - name: Rename for release
+        run: |
+          V="${GITHUB_REF_NAME}"
+          mv artifacts/win-vst3/windows-vst3.zip           "ONE-KNOB-Series-${V}-Windows-x64-VST3.zip"
+          mv artifacts/win-clap/windows-clap.zip           "ONE-KNOB-Series-${V}-Windows-x64-CLAP.zip"
+          mv artifacts/win-installers/windows-installers.zip "ONE-KNOB-Series-${V}-Windows-x64-Installers.zip"
+          mv artifacts/mac-vst3/macos-vst3.zip             "ONE-KNOB-Series-${V}-macOS-Universal-VST3.zip"
+          mv artifacts/mac-clap/macos-clap.zip             "ONE-KNOB-Series-${V}-macOS-Universal-CLAP.zip"
+          mv artifacts/mac-au/macos-au.zip                 "ONE-KNOB-Series-${V}-macOS-Universal-AU.zip"
+          mv artifacts/linux-x86_64/linux-x86_64.tar.gz   "ONE-KNOB-Series-${V}-Linux-x86_64.tar.gz"
+          mv artifacts/linux-arm64/linux-arm64.tar.gz      "ONE-KNOB-Series-${V}-Linux-ARM64.tar.gz"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          generate_release_notes: true
+          files: |
+            ONE-KNOB-Series-*.zip
+            ONE-KNOB-Series-*.tar.gz

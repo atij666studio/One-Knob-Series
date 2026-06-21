@@ -1,0 +1,112 @@
+name: Windows Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-windows:
+    name: Windows x64
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Inno Setup 6
+        run: choco install innosetup --yes --no-progress
+
+      - name: Build all plugins
+        shell: pwsh
+        run: |
+          $plugins = @(
+            'AtiNAMatiC-Air','AtiNAMatiC-Boost','AtiNAMatiC-Dirt',
+            'AtiNAMatiC-Double','AtiNAMatiC-Feel','AtiNAMatiC-Gate',
+            'AtiNAMatiC-HitZone','AtiNAMatiC-Level','AtiNAMatiC-Pick',
+            'AtiNAMatiC-Squash','AtiNAMatiC-Tight'
+          )
+          foreach ($p in $plugins) {
+            Write-Host "::group::Configure $p"
+            cmake -S $p -B "$p/build" -G "Visual Studio 17 2022" -A x64
+            if ($LASTEXITCODE -ne 0) { throw "Configure failed: $p" }
+            Write-Host "::endgroup::"
+            Write-Host "::group::Build $p"
+            cmake --build "$p/build" --config Release --parallel
+            if ($LASTEXITCODE -ne 0) { throw "Build failed: $p" }
+            Write-Host "::endgroup::"
+          }
+
+      - name: Build installers (ISCC)
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          $names = @('Air','Boost','Dirt','Double','Feel','Gate',
+                     'HitZone','Level','Pick','Squash','Tight')
+          foreach ($n in $names) {
+            Write-Host "::group::Package AtiNAMatiC-$n"
+            & $iscc "AtiNAMatiC-$n\Installer\AtiNAMatiC-$n.iss"
+            if ($LASTEXITCODE -ne 0) { Write-Warning "ISCC failed for $n (exit $LASTEXITCODE)" }
+            Write-Host "::endgroup::"
+          }
+
+      - name: Collect artifacts
+        shell: pwsh
+        run: |
+          $null = New-Item -ItemType Directory -Force dist/VST3, dist/CLAP, dist/Installers
+          $map = @(
+            @{Name='Air';     Target='AtiNAMatiCAir'},
+            @{Name='Boost';   Target='AtiNAMatiCBoost'},
+            @{Name='Dirt';    Target='AtiNAMatiCDirt'},
+            @{Name='Double';  Target='AtiNAMatiCDouble'},
+            @{Name='Feel';    Target='AtiNAMatiCFeel'},
+            @{Name='Gate';    Target='AtiNAMatiCGate'},
+            @{Name='HitZone'; Target='AtiNAMatiCHitZone'},
+            @{Name='Level';   Target='AtiNAMatiCLevel'},
+            @{Name='Pick';    Target='AtiNAMatiCPick'},
+            @{Name='Squash';  Target='AtiNAMatiCSquash'},
+            @{Name='Tight';   Target='AtiNAMatiCTight'}
+          )
+          foreach ($e in $map) {
+            $n = $e.Name; $t = $e.Target
+            $arts = "AtiNAMatiC-$n\build\${t}_artefacts\Release"
+            $vst3 = "$arts\VST3\AtiNAMatiC-$n.vst3"
+            if (Test-Path $vst3) { Copy-Item -Recurse $vst3 dist/VST3/ }
+            $clap = "$arts\CLAP\AtiNAMatiC-$n.clap"
+            if (Test-Path $clap) { Copy-Item $clap dist/CLAP/ }
+            $exe = Get-ChildItem "AtiNAMatiC-$n\Installer\Output\*.exe" -ErrorAction SilentlyContinue | Select-Object -First 1
+            if ($exe) { Copy-Item $exe.FullName dist/Installers/ }
+          }
+          Write-Host "VST3:"; Get-ChildItem dist/VST3
+          Write-Host "CLAP:"; Get-ChildItem dist/CLAP
+          Write-Host "Installers:"; Get-ChildItem dist/Installers
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-Windows-x64-VST3-r${{ github.run_number }}
+          path: dist/VST3/
+          retention-days: 60
+          if-no-files-found: warn
+
+      - name: Upload CLAP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-Windows-x64-CLAP-r${{ github.run_number }}
+          path: dist/CLAP/
+          retention-days: 60
+          if-no-files-found: warn
+
+      - name: Upload Installers
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-Windows-x64-Installers-r${{ github.run_number }}
+          path: dist/Installers/
+          retention-days: 60
+          if-no-files-found: warn

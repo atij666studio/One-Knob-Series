@@ -1,5 +1,9 @@
 build/
 .DS_Store
+.claude/
 **/Installer/*/
 **/Installer/*.zip
 *.log
+build_log*.txt
+build_fixed.ps1
+full_build.log

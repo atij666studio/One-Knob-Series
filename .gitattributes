@@ -1,0 +1,26 @@
+# Normalize line endings: LF in repo, platform-native on checkout
+* text=auto eol=lf
+
+# Windows-only files that must have CRLF
+*.ps1  text eol=crlf
+*.iss  text eol=crlf
+*.bat  text eol=crlf
+
+# Explicitly LF
+*.cpp        text eol=lf
+*.h          text eol=lf
+CMakeLists.txt text eol=lf
+*.cmake      text eol=lf
+*.yml        text eol=lf
+*.yaml       text eol=lf
+*.md         text eol=lf
+*.sh         text eol=lf
+*.json       text eol=lf
+
+# Binary — never mangle
+*.png    binary
+*.ico    binary
+*.pdf    binary
+*.exe    binary
+*.dylib  binary
+*.so     binary

@@ -1,0 +1,89 @@
+name: macOS Build
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+concurrency:
+  group: macos-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-macos:
+    name: macOS Universal (arm64 + x86_64)
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: brew install cmake ninja
+
+      - name: Build all plugins
+        run: |
+          PLUGINS=(
+            AtiNAMatiC-Air AtiNAMatiC-Boost AtiNAMatiC-Dirt
+            AtiNAMatiC-Double AtiNAMatiC-Feel AtiNAMatiC-Gate
+            AtiNAMatiC-HitZone AtiNAMatiC-Level AtiNAMatiC-Pick
+            AtiNAMatiC-Squash AtiNAMatiC-Tight
+          )
+          for plugin in "${PLUGINS[@]}"; do
+            echo "::group::Configure $plugin"
+            cmake -S "$plugin" -B "$plugin/build-macos" \
+              -G Ninja \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
+              -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15
+            echo "::endgroup::"
+            echo "::group::Build $plugin"
+            cmake --build "$plugin/build-macos" --config Release --parallel $(sysctl -n hw.logicalcpu)
+            echo "::endgroup::"
+          done
+
+      - name: Collect artifacts
+        run: |
+          mkdir -p dist/VST3 dist/CLAP dist/AU
+          declare -A TARGETS=(
+            [Air]=AtiNAMatiCAir [Boost]=AtiNAMatiCBoost [Dirt]=AtiNAMatiCDirt
+            [Double]=AtiNAMatiCDouble [Feel]=AtiNAMatiCFeel [Gate]=AtiNAMatiCGate
+            [HitZone]=AtiNAMatiCHitZone [Level]=AtiNAMatiCLevel [Pick]=AtiNAMatiCPick
+            [Squash]=AtiNAMatiCSquash [Tight]=AtiNAMatiCTight
+          )
+          for name in "${!TARGETS[@]}"; do
+            target="${TARGETS[$name]}"
+            arts="AtiNAMatiC-$name/build-macos/${target}_artefacts/Release"
+            [ -d "$arts/VST3/AtiNAMatiC-$name.vst3" ]      && cp -r "$arts/VST3/AtiNAMatiC-$name.vst3"      dist/VST3/
+            [ -f "$arts/CLAP/AtiNAMatiC-$name.clap" ]      && cp    "$arts/CLAP/AtiNAMatiC-$name.clap"      dist/CLAP/
+            [ -d "$arts/AU/AtiNAMatiC-$name.component" ]   && cp -r "$arts/AU/AtiNAMatiC-$name.component"   dist/AU/
+          done
+          echo "--- VST3 ---"; ls dist/VST3/ || echo "(none)"
+          echo "--- CLAP ---"; ls dist/CLAP/ || echo "(none)"
+          echo "--- AU   ---"; ls dist/AU/   || echo "(none)"
+
+      - name: Upload VST3
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-macOS-Universal-VST3-r${{ github.run_number }}
+          path: dist/VST3/
+          retention-days: 60
+          if-no-files-found: warn
+
+      - name: Upload CLAP
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-macOS-Universal-CLAP-r${{ github.run_number }}
+          path: dist/CLAP/
+          retention-days: 60
+          if-no-files-found: warn
+
+      - name: Upload AU
+        uses: actions/upload-artifact@v4
+        with:
+          name: ONE-KNOB-macOS-Universal-AU-r${{ github.run_number }}
+          path: dist/AU/
+          retention-days: 60
+          if-no-files-found: warn
