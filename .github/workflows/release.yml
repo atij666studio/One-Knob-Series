@@ -102,12 +102,8 @@ jobs:
       - name: Collect and zip
         run: |
           mkdir -p dist/VST3 dist/CLAP dist/AU
-          declare -A T=([Air]=AtiNAMatiCAir [Boost]=AtiNAMatiCBoost [Dirt]=AtiNAMatiCDirt
-            [Double]=AtiNAMatiCDouble [Feel]=AtiNAMatiCFeel [Gate]=AtiNAMatiCGate
-            [HitZone]=AtiNAMatiCHitZone [Level]=AtiNAMatiCLevel [Pick]=AtiNAMatiCPick
-            [Squash]=AtiNAMatiCSquash [Tight]=AtiNAMatiCTight)
-          for n in "${!T[@]}"; do
-            a="AtiNAMatiC-$n/build/${T[$n]}_artefacts/Release"
+          for n in Air Boost Dirt Double Feel Gate HitZone Level Pick Squash Tight; do
+            a="AtiNAMatiC-$n/build/AtiNAMatiC${n}_artefacts/Release"
             [ -d "$a/VST3/AtiNAMatiC-$n.vst3" ]    && cp -r "$a/VST3/AtiNAMatiC-$n.vst3"    dist/VST3/
             [ -f "$a/CLAP/AtiNAMatiC-$n.clap" ]    && cp    "$a/CLAP/AtiNAMatiC-$n.clap"    dist/CLAP/
             [ -d "$a/AU/AtiNAMatiC-$n.component" ] && cp -r "$a/AU/AtiNAMatiC-$n.component" dist/AU/

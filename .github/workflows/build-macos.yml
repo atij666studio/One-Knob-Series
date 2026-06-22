@@ -47,18 +47,12 @@ jobs:
       - name: Collect artifacts
         run: |
           mkdir -p dist/VST3 dist/CLAP dist/AU
-          declare -A TARGETS=(
-            [Air]=AtiNAMatiCAir [Boost]=AtiNAMatiCBoost [Dirt]=AtiNAMatiCDirt
-            [Double]=AtiNAMatiCDouble [Feel]=AtiNAMatiCFeel [Gate]=AtiNAMatiCGate
-            [HitZone]=AtiNAMatiCHitZone [Level]=AtiNAMatiCLevel [Pick]=AtiNAMatiCPick
-            [Squash]=AtiNAMatiCSquash [Tight]=AtiNAMatiCTight
-          )
-          for name in "${!TARGETS[@]}"; do
-            target="${TARGETS[$name]}"
+          for name in Air Boost Dirt Double Feel Gate HitZone Level Pick Squash Tight; do
+            target="AtiNAMatiC${name}"
             arts="AtiNAMatiC-$name/build-macos/${target}_artefacts/Release"
-            [ -d "$arts/VST3/AtiNAMatiC-$name.vst3" ]      && cp -r "$arts/VST3/AtiNAMatiC-$name.vst3"      dist/VST3/
-            [ -f "$arts/CLAP/AtiNAMatiC-$name.clap" ]      && cp    "$arts/CLAP/AtiNAMatiC-$name.clap"      dist/CLAP/
-            [ -d "$arts/AU/AtiNAMatiC-$name.component" ]   && cp -r "$arts/AU/AtiNAMatiC-$name.component"   dist/AU/
+            [ -d "$arts/VST3/AtiNAMatiC-$name.vst3" ]    && cp -r "$arts/VST3/AtiNAMatiC-$name.vst3"    dist/VST3/
+            [ -f "$arts/CLAP/AtiNAMatiC-$name.clap" ]    && cp    "$arts/CLAP/AtiNAMatiC-$name.clap"    dist/CLAP/
+            [ -d "$arts/AU/AtiNAMatiC-$name.component" ] && cp -r "$arts/AU/AtiNAMatiC-$name.component" dist/AU/
           done
           echo "--- VST3 ---"; ls dist/VST3/ || echo "(none)"
           echo "--- CLAP ---"; ls dist/CLAP/ || echo "(none)"
