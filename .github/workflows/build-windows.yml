@@ -20,8 +20,14 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: Install Inno Setup 6
-        run: choco install innosetup --yes --no-progress
+        shell: pwsh
+        run: choco upgrade innosetup --yes --no-progress
 
       - name: Build all plugins
         shell: pwsh
@@ -34,11 +40,11 @@ jobs:
           )
           foreach ($p in $plugins) {
             Write-Host "::group::Configure $p"
-            cmake -S $p -B "$p/build" -G "Visual Studio 17 2022" -A x64
+            cmake -S $p -B "$p/build" -G Ninja -DCMAKE_BUILD_TYPE=Release
             if ($LASTEXITCODE -ne 0) { throw "Configure failed: $p" }
             Write-Host "::endgroup::"
             Write-Host "::group::Build $p"
-            cmake --build "$p/build" --config Release --parallel
+            cmake --build "$p/build" --parallel
             if ($LASTEXITCODE -ne 0) { throw "Build failed: $p" }
             Write-Host "::endgroup::"
           }
@@ -47,6 +53,7 @@ jobs:
         shell: pwsh
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
           $names = @('Air','Boost','Dirt','Double','Feel','Gate',
                      'HitZone','Level','Pick','Squash','Tight')
           foreach ($n in $names) {

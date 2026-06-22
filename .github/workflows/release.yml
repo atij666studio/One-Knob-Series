@@ -13,8 +13,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
       - name: Install Inno Setup 6
-        run: choco install innosetup --yes --no-progress
+        shell: pwsh
+        run: choco upgrade innosetup --yes --no-progress
 
       - name: Build all plugins
         shell: pwsh
@@ -26,16 +32,18 @@ jobs:
             'AtiNAMatiC-Squash','AtiNAMatiC-Tight'
           )
           foreach ($p in $plugins) {
-            cmake -S $p -B "$p/build" -G "Visual Studio 17 2022" -A x64
-            cmake --build "$p/build" --config Release --parallel
+            cmake -S $p -B "$p/build" -G Ninja -DCMAKE_BUILD_TYPE=Release
+            cmake --build "$p/build" --parallel
           }
 
       - name: Build installers
         shell: pwsh
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
           foreach ($n in @('Air','Boost','Dirt','Double','Feel','Gate','HitZone','Level','Pick','Squash','Tight')) {
             & $iscc "AtiNAMatiC-$n\Installer\AtiNAMatiC-$n.iss"
+            if ($LASTEXITCODE -ne 0) { Write-Warning "ISCC failed for $n (exit $LASTEXITCODE)" }
           }
 
       - name: Collect and zip
