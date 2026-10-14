@@ -52,7 +52,7 @@ void NAMDirtProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     const int ch = juce::jmax (getTotalNumInputChannels(), getTotalNumOutputChannels());
     dsp.prepare (sampleRate, samplesPerBlock, juce::jmax (1, ch));
-    setLatencySamples (0);
+    setLatencySamples (dsp.getLatencySamples());
 }
 
 bool NAMDirtProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const

@@ -17,6 +17,9 @@ namespace nhz
     // Peak above this is considered actually clipping the model's input.
     constexpr float kPeakDangerDb = -3.0f;
 
+    // Input RMS below this is treated as silence / noise between phrases.
+    constexpr float kSilenceDb = -55.0f;
+
     enum class HitStatus { TooCold = 0, Perfect = 1, TooHot = 2 };
 
     inline float dbToGain (float db)  { return std::pow (10.0f, db * 0.05f); }
@@ -74,14 +77,17 @@ namespace nhz
             peakHoldDecayCoef = std::exp (-1.0f / (float) (1.5 * sr));
             peakHoldVal = 0.0f;
 
-            inputGainSmoothed.reset       (sr, 0.030);
+            // Asymmetric per-sample gain glide (dB domain): drop fast so a
+            // loud hit after a quiet passage is caught, rise gently.
+            gainDownCoef = (float) (1.0 - std::exp (-1.0 / (0.0003 * sr)));
+            gainUpCoef   = (float) (1.0 - std::exp (-1.0 / (0.030 * sr)));
+            gainDbNow    = 0.0f;
             outputGainSmoothed.reset      (sr, 0.020);
             mixSmoothed.reset             (sr, 0.020);
             satSmoothed.reset             (sr, 0.050);
             lowShelfGainSmoothed.reset    (sr, 0.080);
             highShelfGainSmoothed.reset   (sr, 0.080);
 
-            inputGainSmoothed.setCurrentAndTargetValue (1.0f);
             outputGainSmoothed.setCurrentAndTargetValue (1.0f);
             mixSmoothed.setCurrentAndTargetValue (1.0f);
             satSmoothed.setCurrentAndTargetValue (0.0f);
@@ -89,6 +95,7 @@ namespace nhz
             highShelfGainSmoothed.setCurrentAndTargetValue (1.0f);
 
             autoGainDb = 0.0f;
+            gainDbNow  = 0.0f;
 
             scratchDry.setSize (channels, blockSize, false, false, true);
             scratchDet.setSize (1,        blockSize, false, false, true);
@@ -103,6 +110,7 @@ namespace nhz
             peakEnv = 0.0f;
             peakHoldVal = 0.0f;
             autoGainDb = 0.0f;
+            gainDbNow  = 0.0f;
         }
 
         void process (juce::AudioBuffer<float>& buffer)
@@ -119,6 +127,11 @@ namespace nhz
             lowShelfGainSmoothed.setTargetValue  (dbToGain (lowGainDb));
             highShelfGainSmoothed.setTargetValue (dbToGain (highGainDb));
 
+            // Coefficients are refreshed once per block, so advance the
+            // smoothers by the whole block (one getNextValue per block would
+            // stretch an 80 ms ramp to tens of seconds).
+            lowShelfGainSmoothed.skip  (juce::jmax (0, n - 1));
+            highShelfGainSmoothed.skip (juce::jmax (0, n - 1));
             *tilt.state = juce::dsp::IIR::ArrayCoefficients<float>::makeLowShelf
                             (sampleRate, 180.0,  0.7f, lowShelfGainSmoothed.getNextValue());
             *air.state  = juce::dsp::IIR::ArrayCoefficients<float>::makeHighShelf
@@ -158,16 +171,17 @@ namespace nhz
                 else                 peakHoldVal *= peakHoldDecayCoef;
             }
 
-            const float currentRmsDbVal  = 10.0f * std::log10 (std::max (rmsAcc, 1.0e-7f));
-            const float currentPeakDbVal = 20.0f * std::log10 (std::max (peakEnv, 1.0e-7f));
-            const float peakHoldDbVal    = 20.0f * std::log10 (std::max (peakHoldVal, 1.0e-7f));
-            currentRmsDb.store (currentRmsDbVal);
-            peakDb.store       (currentPeakDbVal);
-            peakHoldDb.store   (peakHoldDbVal);
+            // Detector runs on the raw input; everything the user (and the
+            // auto loop) cares about is the level *after* our gain, i.e. what
+            // the NAM model actually receives.
+            const float inRmsDb  = 10.0f * std::log10 (std::max (rmsAcc, 1.0e-7f));
+            const float inPeakDb = 20.0f * std::log10 (std::max (peakEnv, 1.0e-7f));
+            const float inHoldDb = 20.0f * std::log10 (std::max (peakHoldVal, 1.0e-7f));
 
             // ---- Decide gain ----
             float targetGainDb = 0.0f;
-            if (autoOn.load())
+            const bool  isAuto  = autoOn.load();
+            if (isAuto)
             {
                 const float r = juce::jlimit (0.0f, 1.0f, response.load());
 
@@ -176,21 +190,31 @@ namespace nhz
                 const float downDbPerSec = juce::jmap (r, 0.0f, 1.0f,  6.0f, 60.0f);
 
                 const float secs = (float) n / (float) sampleRate;
-                const float err  = kTargetRmsIdeal - currentRmsDbVal;
 
-                float step;
-                if (currentPeakDbVal > kPeakDangerDb)
+                // Closed loop: compare the target with input level + the gain
+                // we are already applying (the old open-loop version kept
+                // integrating the same error and ran to the +/-24 dB limit).
+                const float err = kTargetRmsIdeal - (inRmsDb + autoGainDb);
+
+                float step = 0.0f;
+                if (inPeakDb + autoGainDb > kPeakDangerDb)
                 {
                     // Safety stomp: pull down quickly when about to clip the model.
                     step = -downDbPerSec * secs;
                 }
+                else if (inRmsDb < kSilenceDb)
+                {
+                    // Between phrases / silence: hold the current gain instead
+                    // of winding it up and blasting the next note.
+                    step = 0.0f;
+                }
                 else if (err >= 0.0f)
                 {
-                    step = juce::jmin (err * 0.30f, upDbPerSec * secs);
+                    step = juce::jmin (err, upDbPerSec * secs);
                 }
                 else
                 {
-                    step = juce::jmax (err * 0.50f, -downDbPerSec * secs);
+                    step = juce::jmax (err, -downDbPerSec * secs);
                 }
 
                 autoGainDb = juce::jlimit (-24.0f, 24.0f, autoGainDb + step);
@@ -199,9 +223,29 @@ namespace nhz
             else
             {
                 targetGainDb = juce::jlimit (-24.0f, 24.0f, manualGainDb.load());
+                autoGainDb   = targetGainDb;   // switching Auto back on starts from here
             }
 
-            inputGainSmoothed.setTargetValue  (dbToGain (targetGainDb));
+            const float currentRmsDbVal = inRmsDb + targetGainDb;
+            currentRmsDb.store (currentRmsDbVal);
+            peakDb.store       (inPeakDb + targetGainDb);
+            peakHoldDb.store   (inHoldDb + targetGainDb);
+
+            // Hard ceiling from this block's input peak: whatever the loop
+            // wants, never push a peak past the danger level. The detector
+            // has already seen the whole block, so this acts like a short
+            // lookahead and catches the attack that follows a quiet passage.
+            if (isAuto)
+            {
+                float blockPeak = 0.0f;
+                for (int i = 0; i < n; ++i) blockPeak = std::max (blockPeak, std::abs (det[i]));
+                const float ceilingDb = kPeakDangerDb - gainToDb (blockPeak);
+                if (targetGainDb > ceilingDb)
+                {
+                    targetGainDb = ceilingDb;
+                    autoGainDb   = juce::jmin (autoGainDb, juce::jmax (-24.0f, ceilingDb));
+                }
+            }
             outputGainSmoothed.setTargetValue (dbToGain (outputDb.load()));
             mixSmoothed.setTargetValue        (juce::jlimit (0.0f, 1.0f, mix.load()));
 
@@ -227,7 +271,8 @@ namespace nhz
             float lastAppliedGain = 1.0f;
             for (int i = 0; i < n; ++i)
             {
-                const float g     = inputGainSmoothed.getNextValue();
+                gainDbNow += (targetGainDb - gainDbNow) * (targetGainDb < gainDbNow ? gainDownCoef : gainUpCoef);
+                const float g     = dbToGain (gainDbNow);
                 const float satA  = satSmoothed.getNextValue();
                 const float drive = 1.0f + satA * 1.8f; // 1 .. 2.8
                 lastAppliedGain   = g;
@@ -243,6 +288,17 @@ namespace nhz
                         const float xb   = x * drive + bias;
                         const float y    = (std::tanh (xb) - std::tanh (bias)) / drive;
                         x = x + (y - x) * satA;
+                    }
+
+                    // Auto mode promises the model never gets slammed: a
+                    // smooth knee above the danger level that tops out at
+                    // 0 dBFS catches whatever the gain glide lets through.
+                    if (isAuto)
+                    {
+                        constexpr float knee = 0.7079f;            // -3 dBFS
+                        const float ax = std::abs (x);
+                        if (ax > knee)
+                            x = std::copysign (knee + (1.0f - knee) * std::tanh ((ax - knee) / (1.0f - knee)), x);
                     }
 
                     buffer.getWritePointer (ch)[i] = x;
@@ -284,7 +340,9 @@ namespace nhz
         juce::dsp::ProcessorDuplicator<juce::dsp::IIR::Filter<float>,
                                        juce::dsp::IIR::Coefficients<float>> tilt, air, detectorHpf;
 
-        juce::LinearSmoothedValue<float> inputGainSmoothed, outputGainSmoothed,
+        float gainDbNow { 0.0f }, gainDownCoef { 0.1f }, gainUpCoef { 0.01f };
+
+        juce::LinearSmoothedValue<float> outputGainSmoothed,
                                          mixSmoothed, satSmoothed,
                                          lowShelfGainSmoothed, highShelfGainSmoothed;
 

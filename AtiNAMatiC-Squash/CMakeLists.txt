@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.22)
 
 project(AtiNAMatiCSquash VERSION 0.1.0)
 
@@ -87,6 +87,9 @@ target_sources(AtiNAMatiCSquash PRIVATE
     Source/SquashDSP.h
     Source/SquashLookAndFeel.h
 )
+
+# Shared ONE KNOB series code (DSP helpers + UI kit)
+target_include_directories(AtiNAMatiCSquash PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Shared")
 
 target_compile_definitions(AtiNAMatiCSquash PUBLIC
     JUCE_WEB_BROWSER=0

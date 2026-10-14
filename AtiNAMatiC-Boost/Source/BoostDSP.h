@@ -2,6 +2,7 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_dsp/juce_dsp.h>
+#include <OneKnobDSP.h>
 #include <atomic>
 #include <cmath>
 
@@ -9,25 +10,26 @@ namespace nb
 {
     // Pre-amp boost designed to feed a NAM amp model.
     //
-    //  Signal chain (per sample, per channel):
-    //    1. Optional very-gentle low tightening (HPF @ 35 Hz, always on)
-    //    2. Clean input gain  (0..+18 dB driven by BOOST knob)
-    //    3. Soft asymmetric saturation (tanh + small 2nd harmonic bias)
-    //          - normalised so peak stays at 1.0 regardless of drive
-    //          - this is the "harmonic life", NOT overdrive
-    //    4. Tone shaping (per character mode)
+    //  Signal chain (per channel):
+    //    1. Gentle low tightening (HPF @ 35 Hz, always on)
+    //    2. 4x oversampled soft asymmetric saturation
+    //          - unity small-signal gain, so the knob changes how hard the
+    //            curve is driven, not how loud the signal is
+    //          - CLEAN end starts well above full scale (practically
+    //            transparent), PUSH end starts bending around -18 dBFS
+    //          - small bias adds even-order "tube" content; the DC it
+    //            creates is removed right after
+    //    3. Tone shaping (per character mode)
     //          Balanced : tiny high shelf for clarity, scales with boost
     //          Bright   : Balanced + extra presence shelf (~6 kHz)
-    //          Thick    : Balanced + low-mid body shelf  (~200 Hz)
-    //    5. Output compensation
-    //          - automatic loudness make-up so a 0..1 sweep of BOOST does
-    //            not change perceived volume more than ~1 dB
-    //          - then user OUTPUT trim
+    //          Thick    : Balanced + low-mid body shelf  (~220 Hz)
+    //    4. Static loudness compensation computed from the actual curve at a
+    //       typical DI level, so a 0..1 sweep of BOOST stays within ~1 dB
+    //       (no adaptive auto-gain, so nothing breathes), then OUTPUT trim
+    //    5. Dry/wet MIX against a latency-aligned dry signal
     //
-    // The single BOOST macro (0..1) is mapped to *all* of:
-    //   drive, harmonic content amount, clarity shelf gain, auto-makeup.
-    //
-    // Modes are static colour shapes; they do not change the drive amount.
+    // The single BOOST macro (0..1) drives: drive, harmonic bias and the
+    // clarity shelf. Modes are static colour shapes.
     class BoostDSP
     {
     public:
@@ -38,50 +40,52 @@ namespace nb
         std::atomic<float> outputDb    { -90.0f };
         std::atomic<float> sparkAmount {   0.0f };  // 0..1, harmonic energy
 
+        int getLatencySamples() const { return latency; }
+
         void prepare (double sr, int blockSize, int numChannels)
         {
             sampleRate = sr;
-            channels   = juce::jmax (1, numChannels);
+            channels   = juce::jlimit (1, 8, numChannels);
+            maxBlock   = juce::jmax (blockSize, 32);
 
-            const juce::dsp::ProcessSpec spec {
-                sr, (juce::uint32) juce::jmax (blockSize, 32), (juce::uint32) channels
-            };
+            const juce::dsp::ProcessSpec spec { sr, (juce::uint32) maxBlock, (juce::uint32) channels };
 
-            // Gentle DC/sub blocker, always on. Very subtle "low tightening"
-            // that prevents flubby low-end from being amplified into NAM.
             tightenHPF.reset();
             tightenHPF.prepare (spec);
             tightenHPF.setType (juce::dsp::StateVariableTPTFilterType::highpass);
             tightenHPF.setCutoffFrequency (35.0f);
             tightenHPF.setResonance (0.5f);
 
-            // Per-channel tone shapers. Coefficients are shared (updated in
-            // place from the audio thread) — both filter instances copy from
-            // them on every block.
+            // 4x, linear-phase half-band FIR stages: clean aliasing
+            // rejection and an integer latency we can report and match.
+            oversampler = std::make_unique<juce::dsp::Oversampling<float>> (
+                (size_t) channels, 2, juce::dsp::Oversampling<float>::filterHalfBandFIREquiripple, false, true);
+            oversampler->initProcessing ((size_t) maxBlock);
+            latency = (int) std::round (oversampler->getLatencyInSamples());
+
+            dryDelay.prepare (channels, latency + 1);
+            work.setSize (channels, maxBlock, false, true, false);
+
             clarityCoefs = juce::dsp::IIR::Coefficients<float>::makePeakFilter (sr, 1000.0f, 0.7f, 1.0f);
             modeCoefs    = juce::dsp::IIR::Coefficients<float>::makePeakFilter (sr, 1000.0f, 0.7f, 1.0f);
             for (int c = 0; c < (int) clarity.size(); ++c)
             {
                 clarity[c].reset();
                 modeF[c].reset();
+                dc[c].prepare (sr);
                 clarity[c].coefficients = clarityCoefs;
                 modeF[c].coefficients   = modeCoefs;
             }
 
-            smBoost = 0.0f;
+            smBoost = -1.0f;   // snap to the first value we see
             updateClarity (0.0f);
+            for (int m = 0; m < 3; ++m)
+                modeTargets[(size_t) m] = targetModeCoeffs ((Mode) m);
+            *modeCoefs = modeTargets[Balanced];
 
-            // Snap the mode shelf to its true target on prepare (no need to
-            // ramp in from silence), then every later switch crossfades.
-            *modeCoefs = *targetModeCoeffs (Balanced);
+            envIn = envOut = spark = 0.0f;
 
-            envIn  = 0.0f;
-            envOut = 0.0f;
-            spark  = 0.0f;
-
-            // ~25 ms block-rate smoothing for the BOOST macro and for
-            // crossfading the mode-shelf's raw biquad coefficients on switch.
-            smCoef = std::exp (-float (juce::jmax (blockSize, 32)) / float (0.025 * sr));
+            smCoef = std::exp (-float (maxBlock) / float (0.025 * sr));
 
             outGainSm.reset (sr, 0.02);
             mixSm.reset (sr, 0.02);
@@ -92,131 +96,134 @@ namespace nb
         void process (juce::AudioBuffer<float>& buffer,
                       float boost, int mode, float mix, float outGainDb)
         {
+            // Hosts may (rarely) exceed the negotiated block size: work in
+            // chunks of what we prepared for, never allocate.
+            const int total = buffer.getNumSamples();
+            for (int pos = 0; pos < total; pos += maxBlock)
+            {
+                juce::AudioBuffer<float> view (buffer.getArrayOfWritePointers(), buffer.getNumChannels(),
+                                               pos, juce::jmin (maxBlock, total - pos));
+                processChunk (view, boost, mode, mix, outGainDb);
+            }
+        }
+
+    private:
+        void processChunk (juce::AudioBuffer<float>& buffer,
+                           float boost, int mode, float mix, float outGainDb)
+        {
             const int numCh = juce::jmin (channels, buffer.getNumChannels());
             const int n     = buffer.getNumSamples();
             if (numCh <= 0 || n <= 0) return;
 
-            // Smooth the BOOST macro at block rate so drive/shape/bias and the
-            // clarity shelf don't snap on a fast knob move/automation.
-            smBoost = smCoef * smBoost + (1.0f - smCoef) * boost;
+            // Block-rate smoothing of the BOOST macro.
+            smBoost = smBoost < 0.0f ? boost : smCoef * smBoost + (1.0f - smCoef) * boost;
 
             // --- Macro mapping -------------------------------------------
-            // boost 0..1 controls everything together.
-            const float driveDb = smBoost * 18.0f;                // pre-sat gain
-            const float drive   = juce::Decibels::decibelsToGain (driveDb);
-            // Effective shaping amount for the saturator (>= 1.0). We tanh on
-            // (drive * x) and then renormalise so output peak stays ~1.0.
-            // shapeNorm scales the curve into a more "alive" feel at low boost.
-            const float shape   = juce::jmax (1.0e-3f, drive);
-            const float invTanh = 1.0f / std::tanh (shape);
-            // 2nd-harmonic bias — adds a tiny asymmetry so we get even-order
-            // content (warm, "tube-ish"). Stays subtle.
-            const float bias    = smBoost * 0.07f;
+            // Drive -6..+18 dB: the curve starts bending around 1/drive, so
+            // CLEAN (~+6 dBFS onset) is effectively linear for any sane
+            // input while PUSH saturates from about -18 dBFS.
+            const float drive = juce::Decibels::decibelsToGain (-6.0f + smBoost * 24.0f);
+            const float bias  = smBoost * 0.07f;
+            const float tb    = std::tanh (bias);
+            const float norm  = 1.0f / (drive * (1.0f - tb * tb));   // unity slope at 0
 
-            // Auto make-up so loudness is preserved across the BOOST sweep.
-            // Empirically the tanh stage adds roughly +driveDb of crest before
-            // re-normalisation; we trim back almost all of it.
-            const float autoMakeupDb = -driveDb * 0.85f;
-            outGainSm.setTargetValue (juce::Decibels::decibelsToGain (autoMakeupDb + outGainDb));
+            // Static loudness compensation at a typical DI level, so the knob
+            // changes character rather than volume (and never breathes).
+            const float comp = ok::referenceCompensation ([&] (float x) { return (std::tanh (drive * x + bias) - tb) * norm; });
+            outGainSm.setTargetValue (comp * juce::Decibels::decibelsToGain (outGainDb));
             mixSm.setTargetValue (mix);
 
-            // Crossfade the mode shelf's raw biquad coefficients toward the
-            // selected mode every block, rather than snapping the instant the
-            // mode changes -- avoids a hard filter-state jump on switch.
             updateModeShelf ((Mode) mode);
             updateClarity (smBoost);
 
-            // --- Render --------------------------------------------------
-            const int chClamp = juce::jmin (numCh, 8);
-            float* writePtrs[8] = { nullptr };
-            for (int c = 0; c < chClamp; ++c)
-                writePtrs[c] = buffer.getWritePointer (c);
+            // --- 1) tighten, keep the input for dry / loudness reference --
+            for (int c = 0; c < numCh; ++c)
+            {
+                work.copyFrom (c, 0, buffer, c, 0, n);
+                auto* d = buffer.getWritePointer (c);
+                for (int i = 0; i < n; ++i)
+                    d[i] = tightenHPF.processSample (c, d[i]);
+            }
 
-            // Per-block envelope smoothing coeffs.
-            const float envA = (float) (1.0 - std::exp (-1.0 / (0.020 * sampleRate)));
+            // --- 2) oversampled saturation -------------------------------
+            float sparkNum = 0.0f, sparkDen = 1.0e-9f;
+            {
+                juce::dsp::AudioBlock<float> block (buffer.getArrayOfWritePointers(), (size_t) numCh, (size_t) n);
+                auto up = oversampler->processSamplesUp (block);
+                for (size_t c = 0; c < up.getNumChannels(); ++c)
+                {
+                    auto* d = up.getChannelPointer (c);
+                    for (size_t i = 0; i < up.getNumSamples(); ++i)
+                    {
+                        const float x   = d[i];
+                        const float sat = (std::tanh (drive * x + bias) - tb) * norm;
+                        if (c == 0)
+                        {
+                            sparkNum += std::abs (sat - x);
+                            sparkDen += std::abs (x);
+                        }
+                        d[i] = sat;
+                    }
+                }
+                oversampler->processSamplesDown (block);
+            }
 
-            float pkIn = 0.0f, pkOut = 0.0f, sparkAcc = 0.0f;
-
+            // --- 3..5) DC, tone, loudness, trim, mix ---------------------
+            float pkIn = 0.0f, pkOut = 0.0f;
             for (int i = 0; i < n; ++i)
             {
                 const float outGainNow = outGainSm.getNextValue();
                 const float mixNow     = mixSm.getNextValue();
 
-                for (int c = 0; c < chClamp; ++c)
+                for (int c = 0; c < numCh; ++c)
                 {
-                    const float xRaw = writePtrs[c][i];
+                    float* d = buffer.getWritePointer (c);
+                    const float shaped = modeF[c].processSample (clarity[c].processSample (dc[c].process (d[i])));
+                    const float xIn = work.getSample (c, i);
+                    const float dry = dryDelay.process (c, xIn, latency);
+                    const float y   = shaped * outGainNow * mixNow + dry * (1.0f - mixNow);
+                    d[i] = y;
 
-                    // 1) tighten
-                    const float xTight = tightenHPF.processSample (c, xRaw);
-
-                    // 2) clean gain into saturator
-                    const float driven = xTight * drive;
-
-                    // 3) soft asymmetric saturation (normalised)
-                    //    y = (tanh(driven + bias) - tanh(bias)) / tanh(drive)
-                    //    keeps DC at 0 and peak ~1.0 regardless of drive.
-                    const float sat = (std::tanh (driven + bias) - std::tanh (bias)) * invTanh;
-
-                    // 4) tone shaping (per-channel filters)
-                    const float shaped = modeF[c].processSample (clarity[c].processSample (sat));
-
-                    // 5) output trim + dry/wet
-                    const float wet = shaped * outGainNow;
-                    const float y   = wet * mixNow + xRaw * (1.0f - mixNow);
-
-                    writePtrs[c][i] = y;
-
-                    if (c == 0)
-                    {
-                        const float aIn  = std::abs (xRaw);
-                        const float aOut = std::abs (y);
-                        if (aIn  > pkIn)  pkIn  = aIn;
-                        if (aOut > pkOut) pkOut = aOut;
-
-                        // "Spark" = how much harmonic content the saturator
-                        // is producing — i.e. how much sat differs from a
-                        // straight-through scaled signal. Normalised by drive.
-                        const float linear = xTight; // unity-gain ref
-                        sparkAcc += std::abs (sat - linear);
-                    }
+                    pkIn  = juce::jmax (pkIn,  std::abs (xIn));
+                    pkOut = juce::jmax (pkOut, std::abs (y));
                 }
+                dryDelay.advance();
             }
 
+            const float envA = (float) (1.0 - std::exp (-(double) n / (0.060 * sampleRate)));
             envIn  += (pkIn  - envIn)  * envA;
             envOut += (pkOut - envOut) * envA;
-            spark  += (juce::jmin (1.0f, sparkAcc / juce::jmax (1, n) * (1.0f + smBoost * 4.0f)) - spark) * envA;
+            const float sparkNow = juce::jlimit (0.0f, 1.0f, (sparkNum / sparkDen) * 6.0f);
+            spark  += (sparkNow - spark) * envA;
 
             inputDb.store     (juce::Decibels::gainToDecibels (envIn,  -90.0f), std::memory_order_relaxed);
             outputDb.store    (juce::Decibels::gainToDecibels (envOut, -90.0f), std::memory_order_relaxed);
             sparkAmount.store (juce::jlimit (0.0f, 1.0f, spark),                std::memory_order_relaxed);
         }
 
-    private:
+        using Biquad = std::array<float, 6>;
+
         void updateClarity (float boost)
         {
             // Up to ~+2.5 dB at 4 kHz. Subtle, scales with boost.
-            const float gainDb = boost * 2.5f;
-            *clarityCoefs = *juce::dsp::IIR::Coefficients<float>::makeHighShelf (
-                sampleRate, 4000.0f, 0.7f,
-                juce::Decibels::decibelsToGain (gainDb));
+            // ArrayCoefficients: no heap allocation on the audio thread.
+            *clarityCoefs = juce::dsp::IIR::ArrayCoefficients<float>::makeHighShelf (
+                sampleRate, 4000.0f, 0.7f, juce::Decibels::decibelsToGain (boost * 2.5f));
         }
 
-        juce::ReferenceCountedObjectPtr<juce::dsp::IIR::Coefficients<float>>
-            targetModeCoeffs (Mode m)
+        Biquad targetModeCoeffs (Mode m) const
         {
             switch (m)
             {
                 case Bright:
-                    return juce::dsp::IIR::Coefficients<float>::makeHighShelf (
-                            sampleRate, 6000.0f, 0.7f,
-                            juce::Decibels::decibelsToGain (3.0f));
+                    return juce::dsp::IIR::ArrayCoefficients<float>::makeHighShelf (
+                            sampleRate, 6000.0f, 0.7f, juce::Decibels::decibelsToGain (3.0f));
                 case Thick:
-                    return juce::dsp::IIR::Coefficients<float>::makeLowShelf (
-                            sampleRate, 220.0f, 0.7f,
-                            juce::Decibels::decibelsToGain (3.0f));
+                    return juce::dsp::IIR::ArrayCoefficients<float>::makeLowShelf (
+                            sampleRate, 220.0f, 0.7f, juce::Decibels::decibelsToGain (3.0f));
                 case Balanced:
                 default:
-                    return juce::dsp::IIR::Coefficients<float>::makePeakFilter (
+                    return juce::dsp::IIR::ArrayCoefficients<float>::makePeakFilter (
                             sampleRate, 1000.0f, 0.7f, 1.0f);
             }
         }
@@ -228,28 +235,35 @@ namespace nb
         // cheap, and avoids the instant filter-state jump on switch.
         void updateModeShelf (Mode m)
         {
-            auto target = targetModeCoeffs (m);
-            auto& cur = modeCoefs->coefficients;
-            auto& tgt = target->coefficients;
-            const int num = juce::jmin (cur.size(), tgt.size());
-            for (int i = 0; i < num; ++i)
-                cur.getReference (i) = smCoef * cur[i] + (1.0f - smCoef) * tgt[i];
+            const auto& tgt = modeTargets[(size_t) juce::jlimit (0, 2, (int) m)];
+            auto* cur = modeCoefs->getRawCoefficients();
+            // Coefficients stores b0 b1 b2 a1 a2 (a0 normalised away);
+            // ArrayCoefficients gives b0 b1 b2 a0 a1 a2.
+            const float inv = 1.0f / tgt[3];
+            const float t[5] { tgt[0] * inv, tgt[1] * inv, tgt[2] * inv, tgt[4] * inv, tgt[5] * inv };
+            for (int i = 0; i < 5; ++i)
+                cur[i] = smCoef * cur[i] + (1.0f - smCoef) * t[i];
         }
 
         double sampleRate { 48000.0 };
         int    channels   { 2 };
+        int    maxBlock   { 512 };
+        int    latency    { 0 };
 
         juce::dsp::StateVariableTPTFilter<float> tightenHPF;
+        std::unique_ptr<juce::dsp::Oversampling<float>> oversampler;
+        juce::AudioBuffer<float> work;
+        ok::DelayLine dryDelay;
+        std::array<ok::DcBlocker, 8> dc;
 
         // Shared coefficient objects, updated in-place on the audio thread.
         // Each per-channel filter holds a ReferenceCountedObjectPtr to them.
         juce::ReferenceCountedObjectPtr<juce::dsp::IIR::Coefficients<float>> clarityCoefs, modeCoefs;
+        std::array<Biquad, 3> modeTargets {};
         std::array<juce::dsp::IIR::Filter<float>, 8> clarity;
         std::array<juce::dsp::IIR::Filter<float>, 8> modeF;
 
-        // Block-rate smoothed BOOST macro + mode-shelf crossfade coefficient,
-        // and per-sample output/mix ramps.
-        float smBoost { 0.0f };
+        float smBoost { -1.0f };
         float smCoef  { 0.0f };
         juce::SmoothedValue<float> outGainSm, mixSm;
 

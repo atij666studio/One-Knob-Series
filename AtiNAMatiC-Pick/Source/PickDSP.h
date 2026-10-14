@@ -47,10 +47,16 @@ namespace np
             channels   = juce::jmax (1, numChannels);
 
             // Envelope time constants (ms -> per-sample one-pole coeffs).
+            // Both followers share one release: on a sustained note they
+            // decay together between waveform peaks, so their difference
+            // stays ~0 and sustain really is untouched. (Separate releases
+            // made T ripple at the note frequency on low notes, which
+            // modulated the gain and added fuzz.)
             fastAtt = oneOverTau (1.5,   sr);
-            fastRel = oneOverTau (25.0,  sr);
-            slowAtt = oneOverTau (40.0,  sr);
-            slowRel = oneOverTau (220.0, sr);
+            slowAtt = oneOverTau (20.0,  sr);
+            fastRel = slowRel = oneOverTau (160.0, sr);
+            tSmCoef = oneOverTau (0.7, sr);
+            tSm     = 0.0f;
 
             for (auto& e : fastEnv) e = 0.0f;
             for (auto& e : slowEnv) e = 0.0f;
@@ -81,6 +87,11 @@ namespace np
             // through neutral) would otherwise step/click every block.
             smA = 0.0f;
             smACoef = oneOverTau (15.0, sr);
+
+            outGainSm.reset (sr, 0.02);
+            mixSm.reset (sr, 0.02);
+            outGainSm.setCurrentAndTargetValue (1.0f);
+            mixSm.setCurrentAndTargetValue (1.0f);
         }
 
         // attack: 0..1, mapped to -1..+1
@@ -111,11 +122,12 @@ namespace np
             // Tiny loudness make-up: the gain modulation is roughly
             // zero-mean over time, but the EQ tilt slightly changes
             // perceived level. Compensate gently.
-            const float makeUpDb = -0.5f * std::abs (A);
-            const float outGain  = juce::Decibels::decibelsToGain (makeUpDb + outDb);
-
-            const float wet = mix;
-            const float dry = 1.0f - mix;
+            // Loudness make-up: SOFT pulls attacks down (quieter overall),
+            // SHARP pushes them up (louder). Measured on DI guitar, roughly
+            // -3.9 dB / +2.9 dB at the extremes; compensate for it.
+            const float makeUpDb = (A < 0.0f ? -3.8f : -2.9f) * A;
+            outGainSm.setTargetValue (juce::Decibels::decibelsToGain (makeUpDb + outDb));
+            mixSm.setTargetValue (mix);
 
             const int chClamp = juce::jmin (numCh, 8);
             float* wp[8] = { nullptr };
@@ -132,11 +144,11 @@ namespace np
 
             for (int i = 0; i < n; ++i)
             {
-                // Use channel-0 envelope to drive the gain on all channels —
-                // keeps stereo image stable, and is what most pick-attack
-                // tools do.
-                const float xMono = wp[0][i];
-                const float aMono = std::abs (xMono);
+                // One linked detector (loudest channel) drives the gain on
+                // all channels — keeps the stereo image stable.
+                float aMono = 0.0f;
+                for (int c = 0; c < chClamp; ++c)
+                    aMono = juce::jmax (aMono, std::abs (wp[c][i]));
 
                 // Fast envelope (true peak follower)
                 {
@@ -155,11 +167,17 @@ namespace np
                 const float slowV = slowEnv[0];
                 float T = (fastV - slowV) / (slowV + eps);
                 T = juce::jlimit (0.0f, 2.0f, T) * 0.5f; // map ~0..1 typical
+                tSm += (T - tSm) * tSmCoef;              // de-zipper the gain curve
+                T = tSm;
                 if (T > transPk) transPk = T;
                 transAcc += T;
 
                 smA += (A - smA) * smACoef;
                 const float g = 1.0f + smA * kStrength * T;
+
+                const float outGain = outGainSm.getNextValue();
+                const float wet     = mixSm.getNextValue();
+                const float dry     = 1.0f - wet;
 
                 for (int c = 0; c < chClamp; ++c)
                 {
@@ -225,9 +243,9 @@ namespace np
             const float hsDb = A * 1.5f;
             const float lsDb = -A * 1.0f;        // soft side adds low body
 
-            *highShelfCoefs = *juce::dsp::IIR::Coefficients<float>::makeHighShelf (
+            *highShelfCoefs = juce::dsp::IIR::ArrayCoefficients<float>::makeHighShelf (
                 sampleRate, 4000.0f, 0.7f, juce::Decibels::decibelsToGain (hsDb));
-            *lowShelfCoefs  = *juce::dsp::IIR::Coefficients<float>::makeLowShelf (
+            *lowShelfCoefs  = juce::dsp::IIR::ArrayCoefficients<float>::makeLowShelf (
                 sampleRate, A > 0 ? 120.0f : 200.0f,
                 0.7f, juce::Decibels::decibelsToGain (lsDb));
         }
@@ -249,6 +267,10 @@ namespace np
         // Per-sample smoothed bipolar attack value (drives gain shaping).
         float smA     { 0.0f };
         float smACoef { 0.0f };
+        float tSm     { 0.0f };
+        float tSmCoef { 0.0f };
+
+        juce::SmoothedValue<float> outGainSm, mixSm;
 
         float envInDisp     { 0.0f };
         float envOutDisp    { 0.0f };

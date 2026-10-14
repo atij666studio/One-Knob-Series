@@ -13,6 +13,10 @@ namespace sq
     inline float dbToGain (float db) { return std::pow (10.0f, db * 0.05f); }
 
     // ---- Feedforward RMS compressor, stereo-linked ----
+    // Thresholds are set for real-world guitar / bus levels (-24..-12 dBFS
+    // RMS): roughly 2-4 dB of gain reduction around the middle of the knob,
+    // heavy compression at the top. Make-up follows the measured gain
+    // reduction so the loudness stays put while you turn the knob.
     class SquashDSP
     {
     public:
@@ -39,14 +43,22 @@ namespace sq
             // GR display ballistic coefficients computed per-block in process()
             grDisplay = 0.0f;
 
-            // 10 ms RMS window
-            rmsCoef = std::exp (-1.0f / float (0.010 * sr));
+            // 5 ms RMS window (fast enough to catch pick transients)
+            rmsCoef = std::exp (-1.0f / float (0.005 * sr));
+
+            // Auto make-up follows the *actual* average gain reduction
+            // (~1.5 s average, only while there's signal), so it matches
+            // loudness at any input level instead of assuming 0 dBFS.
+            grAvgCoef   = 1.0f - std::exp (-1.0f / float (1.5 * sr));
+            grAvgDb     = 0.0f;
+            makeupDbNow = 0.0f;
         }
 
         void reset()
         {
             for (auto& cs : chState) { cs.meanSq = 0.0f; cs.gainSmooth = 1.0f; }
             grDisplay = 0.0f;
+            grAvgDb = makeupDbNow = 0.0f;
             grDb.store (0.0f);
         }
 
@@ -73,7 +85,7 @@ namespace sq
 
             const float attCoef  = std::exp (-1.0f / float (smAttMs  * 0.001 * sampleRate));
             const float relCoef  = std::exp (-1.0f / float (smRelMs  * 0.001 * sampleRate));
-            const float makeup   = dbToGain (smMakeup);
+            const float makeupCap = smMakeup;   // upper bound from the knob mapping
             const float halfKnee = smKneeDb * 0.5f;
 
             float peakGrDb = 0.0f;   // worst GR this block
@@ -115,14 +127,18 @@ namespace sq
                 // route the makeup delta through the attack/release envelope.
                 const float targetGr = dbToGain (gainReductionDb);
 
+                // Stereo-linked smoother: one gain for every channel.
+                auto& gs = chState[0].gainSmooth;
+                const float coef = (targetGr < gs) ? attCoef : relCoef;
+                gs = coef * gs + (1.0f - coef) * targetGr;
+
+                if (inputDb > -50.0f)
+                    grAvgDb += (-20.0f * std::log10 (juce::jmax (gs, 1.0e-6f)) - grAvgDb) * grAvgCoef;
+                makeupDbNow += (juce::jlimit (0.0f, makeupCap, grAvgDb) - makeupDbNow) * grAvgCoef;
+                const float g = gs * dbToGain (makeupDbNow);
+
                 for (int ch = 0; ch < numCh; ++ch)
-                {
-                    auto& cs = chState[(size_t) juce::jmin (ch, (int) chState.size() - 1)];
-                    // attack when we need more compression (gain drops), release otherwise
-                    const float coef = (targetGr < cs.gainSmooth) ? attCoef : relCoef;
-                    cs.gainSmooth = coef * cs.gainSmooth + (1.0f - coef) * targetGr;
-                    buffer.getWritePointer (ch)[i] *= cs.gainSmooth * makeup;
-                }
+                    buffer.getWritePointer (ch)[i] *= g;
 
                 peakGrDb = juce::jmin (peakGrDb, gainReductionDb);
             }
@@ -152,8 +168,8 @@ namespace sq
             {
                 case Mode::Gentle:
                     // Transparent bus glue — slow, wide knee, mild ratio
-                    threshDb  = juce::jmap (se, 0.0f, 1.0f,  -3.0f, -14.0f);
-                    ratio     = juce::jmap (se, 0.0f, 1.0f,   1.5f,   4.0f);
+                    threshDb  = juce::jmap (se, 0.0f, 1.0f, -12.0f, -30.0f);
+                    ratio     = juce::jmap (se, 0.0f, 1.0f,   1.5f,   3.0f);
                     attackMs  = juce::jmap (se, 0.0f, 1.0f,  50.0f,  12.0f);
                     releaseMs = juce::jmap (se, 0.0f, 1.0f, 300.0f,  80.0f);
                     kneeDb    = juce::jmap (se, 0.0f, 1.0f,   8.0f,   4.0f);
@@ -162,7 +178,7 @@ namespace sq
                 case Mode::Standard:
                 default:
                     // All-purpose: snappy but musical
-                    threshDb  = juce::jmap (se, 0.0f, 1.0f,  -6.0f, -22.0f);
+                    threshDb  = juce::jmap (se, 0.0f, 1.0f, -14.0f, -34.0f);
                     ratio     = juce::jmap (se, 0.0f, 1.0f,   2.0f,   8.0f);
                     attackMs  = juce::jmap (se, 0.0f, 1.0f,  25.0f,   3.0f);
                     releaseMs = juce::jmap (se, 0.0f, 1.0f, 200.0f,  40.0f);
@@ -171,7 +187,7 @@ namespace sq
 
                 case Mode::Smash:
                     // Aggressive parallel-style — fast, tight, hard knee
-                    threshDb  = juce::jmap (se, 0.0f, 1.0f,  -9.0f, -30.0f);
+                    threshDb  = juce::jmap (se, 0.0f, 1.0f, -16.0f, -40.0f);
                     ratio     = juce::jmap (se, 0.0f, 1.0f,   4.0f,  20.0f);
                     attackMs  = juce::jmap (se, 0.0f, 1.0f,   8.0f,   0.5f);
                     releaseMs = juce::jmap (se, 0.0f, 1.0f, 100.0f,  15.0f);
@@ -179,9 +195,10 @@ namespace sq
                     break;
             }
 
-            // Auto makeup: scale with se so the knob at 0 is truly transparent.
-            // Approximates 70% of the expected static GR at full compression.
-            const float rawMakeup = -threshDb * (1.0f - 1.0f / ratio) * 0.70f;
+            // Upper bound for the adaptive make-up (the actual amount follows
+            // the measured gain reduction). Scales with se so the knob at 0
+            // is truly transparent.
+            const float rawMakeup = -threshDb * (1.0f - 1.0f / ratio);
             makeupDb = se * juce::jlimit (0.0f, 20.0f, rawMakeup);
         }
 
@@ -204,6 +221,10 @@ namespace sq
         std::array<ChannelState, 8> chState;
 
         float grDisplay     { 0.0f };
+
+        float grAvgCoef   { 0.0f };
+        float grAvgDb     { 0.0f };
+        float makeupDbNow { 0.0f };
 
     };
 }

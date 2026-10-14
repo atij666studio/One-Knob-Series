@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.22)
 
 project(AtiNAMatiCPick VERSION 0.1.0)
 
@@ -90,6 +90,9 @@ target_sources(AtiNAMatiCPick PRIVATE
     Source/PickDSP.h
     Source/PickLookAndFeel.h
 )
+
+# Shared ONE KNOB series code (DSP helpers + UI kit)
+target_include_directories(AtiNAMatiCPick PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Shared")
 
 target_compile_definitions(AtiNAMatiCPick PUBLIC
     JUCE_WEB_BROWSER=0

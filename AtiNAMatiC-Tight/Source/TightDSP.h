@@ -11,51 +11,45 @@ namespace nt
 
     inline float dbToGain (float db) { return std::pow (10.0f, db * 0.05f); }
 
-    // Per-channel transient shaper using fast / slow envelopes.
-    // Attack gain is applied where fast > slow (transient onset).
+    // Stereo-linked transient shaper using fast / slow envelopes.
+    //
+    // Both envelopes share the same release, so on a sustained note they
+    // decay together between waveform peaks and their difference stays ~0
+    // (separate releases made the "transient" signal ripple at the note's
+    // own frequency, which modulated the gain and fuzzed up low notes).
+    // Only the attack time differs: fast ~1 ms, slow ~30 ms, so a pick
+    // attack opens a gap for a few tens of ms and nothing else does.
     struct TransientShaper
     {
-        float fast { 0.0f }, slow { 0.0f };
-        float aFast { 0.0f }, aSlow { 0.0f };
-        float rFast { 0.0f }, rSlow { 0.0f };
+        float fast { 0.0f }, slow { 0.0f }, gainDb { 0.0f };
+        float aFast { 0.0f }, aSlow { 0.0f }, rel { 0.0f }, gSm { 0.0f };
 
         void prepare (double sr)
         {
-            // Time constants: fast ~5 ms attack / 20 ms release,
-            // slow ~30 ms attack / 150 ms release.
-            aFast = std::exp (-1.0f / float (0.005 * sr));
-            rFast = std::exp (-1.0f / float (0.020 * sr));
-            aSlow = std::exp (-1.0f / float (0.030 * sr));
-            rSlow = std::exp (-1.0f / float (0.150 * sr));
-            fast = slow = 0.0f;
+            aFast = 1.0f - std::exp (-1.0f / float (0.001 * sr));
+            aSlow = 1.0f - std::exp (-1.0f / float (0.030 * sr));
+            rel   = 1.0f - std::exp (-1.0f / float (0.120 * sr));
+            gSm   = 1.0f - std::exp (-1.0f / float (0.0007 * sr));
+            reset();
         }
 
-        void reset() { fast = slow = 0.0f; }
+        void reset() { fast = slow = gainDb = 0.0f; }
 
-        // Returns linear gain to multiply the sample by.
-        // amount in [0..1]: 0 => bypass (gain==1), 1 => max ~+9 dB on transients,
-        // sustain reduced by ~ -3 dB.
-        inline float processSample (float x, float amount)
+        // detector: linked level (max |x| across channels).
+        // amount in [0..1+]: 0 => unity, 1 => up to ~+6 dB on attacks with
+        // a gentle -1.5 dB on the sustain.
+        inline float processSample (float detector, float amount)
         {
-            const float a = std::abs (x);
+            fast += (detector - fast) * (detector > fast ? aFast : rel);
+            slow += (detector - slow) * (detector > slow ? aSlow : rel);
 
-            const float cF = (a > fast) ? aFast : rFast;
-            fast = cF * fast + (1.0f - cF) * a;
-            const float cS = (a > slow) ? aSlow : rSlow;
-            slow = cS * slow + (1.0f - cS) * a;
-
-            // Attack signal in [0..1+]
-            const float diff = juce::jmax (0.0f, fast - slow);
-            const float norm = diff / juce::jmax (slow, 1.0e-5f);
-            const float attack = juce::jmin (1.0f, norm);
-
-            // Sustain signal: how "steady" we are (near 1 when fast≈slow).
+            const float norm   = juce::jmax (0.0f, fast - slow) / juce::jmax (slow, 1.0e-5f);
+            const float attack = norm / (1.0f + norm);            // soft 0..1
             const float steady = 1.0f - juce::jmin (1.0f, norm * 2.0f);
 
-            // Boost transients, attenuate sustain a touch.
-            const float attackDb  = +9.0f * amount * attack;
-            const float sustainDb = -3.0f * amount * steady;
-            return dbToGain (attackDb + sustainDb);
+            const float target = amount * (6.0f * attack - 1.5f * steady);
+            gainDb += (target - gainDb) * gSm;
+            return dbToGain (gainDb);
         }
     };
 
@@ -93,7 +87,7 @@ namespace nt
             lowBand.reset();
             *lowBand.state = juce::dsp::IIR::ArrayCoefficients<float>::makeBandPass (sr, 80.0, 0.5);
 
-            for (auto& ts : shapers) ts.prepare (sr);
+            shaper.prepare (sr);
 
             shapeAmtSm.reset (sr, 0.030);
             shapeAmtSm.setCurrentAndTargetValue (0.0f);
@@ -103,7 +97,6 @@ namespace nt
             // on the audio thread even if a host violates the block-size contract.
             maxBlockSize = juce::jmax (1, blockSize);
             scratchDet.setSize (1, maxBlockSize, false, false, true);
-            shapeBuf.assign ((size_t) maxBlockSize, 0.0f);
 
             lowEnv = 0.0f;
             lowEnvCoef = std::exp (-1.0f / float (0.080 * sr));
@@ -114,7 +107,7 @@ namespace nt
             hpf1.reset(); hpf2.reset();
             lowMidDip.reset(); presence.reset();
             lowBand.reset();
-            for (auto& ts : shapers) ts.reset();
+            shaper.reset();
             lowEnv = 0.0f;
         }
 
@@ -122,12 +115,23 @@ namespace nt
         // Updates `lowEnergyDb` for the meter from the *input* signal.
         void process (juce::AudioBuffer<float>& buffer)
         {
+            // A host that sends more than it negotiated gets processed in
+            // chunks of the reserved size -- no allocation, no dry tail.
+            const int total = buffer.getNumSamples();
+            for (int pos = 0; pos < total; pos += maxBlockSize)
+            {
+                const int len = juce::jmin (maxBlockSize, total - pos);
+                juce::AudioBuffer<float> view (buffer.getArrayOfWritePointers(), buffer.getNumChannels(), pos, len);
+                processChunk (view);
+            }
+        }
+
+    private:
+        void processChunk (juce::AudioBuffer<float>& buffer)
+        {
             const int numCh = juce::jmin (buffer.getNumChannels(), channels);
-            // Clamp to the capacity reserved in prepare() rather than resizing
-            // scratchDet/shapeBuf here -- guarantees no audio-thread allocation
-            // even if a host sends a larger block than it negotiated.
-            const int n = juce::jmin (buffer.getNumSamples(), maxBlockSize);
-            if (numCh <= 0 || n <= 0) return;
+            const int n     = buffer.getNumSamples();
+            if (numCh <= 0 || n <= 0 || n > maxBlockSize) return;
 
             const float t = juce::jlimit (0.0f, 1.0f, tight.load());
             const Mode  m = (Mode) juce::jlimit (0, 2, modeIx.load());
@@ -172,23 +176,18 @@ namespace nt
                 presence.process (ctx);
             }
 
-            // ---- Transient shaping ----
+            // ---- Transient shaping (one linked detector keeps the image steady) ----
             for (int i = 0; i < n; ++i)
-                shapeBuf[(size_t) i] = shapeAmtSm.getNextValue();
-
-            for (int ch = 0; ch < numCh; ++ch)
             {
-                auto* wp = buffer.getWritePointer (ch);
-                auto& ts = shapers[(size_t) juce::jmin (ch, (int) shapers.size() - 1)];
-                for (int i = 0; i < n; ++i)
-                {
-                    const float g = ts.processSample (wp[i], shapeBuf[(size_t) i]);
-                    wp[i] *= g;
-                }
+                float det = 0.0f;
+                for (int ch = 0; ch < numCh; ++ch)
+                    det = juce::jmax (det, std::abs (buffer.getReadPointer (ch)[i]));
+                const float g = shaper.processSample (det, shapeAmtSm.getNextValue());
+                for (int ch = 0; ch < numCh; ++ch)
+                    buffer.getWritePointer (ch)[i] *= g;
             }
         }
 
-    private:
         // Maps the master TIGHT knob through the Mode curve to per-stage params.
         static void mapKnob (float t, Mode m,
                              float& hpfHz, float& dipDb, float& presenceDb,
@@ -253,10 +252,9 @@ namespace nt
 
         juce::LinearSmoothedValue<float> shapeAmtSm;
 
-        std::array<TransientShaper, 8> shapers;
+        TransientShaper shaper;
 
         juce::AudioBuffer<float> scratchDet;
-        std::vector<float>       shapeBuf;
 
         float lowEnv { 0.0f };
         float lowEnvCoef { 0.99f };

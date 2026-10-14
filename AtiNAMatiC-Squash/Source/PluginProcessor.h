@@ -40,6 +40,7 @@ public:
 
 private:
     juce::AudioBuffer<float> dryBuffer;
+    juce::SmoothedValue<float> mixSm, outSm;
 
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (NAMSquashProcessor)
 };

@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.22)
 
 project(AtiNAMatiCGate VERSION 0.1.0)
 
@@ -90,6 +90,9 @@ target_sources(AtiNAMatiCGate PRIVATE
     Source/GateDSP.h
     Source/GateLookAndFeel.h
 )
+
+# Shared ONE KNOB series code (DSP helpers + UI kit)
+target_include_directories(AtiNAMatiCGate PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Shared")
 
 target_compile_definitions(AtiNAMatiCGate PUBLIC
     JUCE_WEB_BROWSER=0

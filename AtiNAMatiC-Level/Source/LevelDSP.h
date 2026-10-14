@@ -50,14 +50,12 @@ namespace na
             channels   = juce::jmax (1, numChannels);
             juce::ignoreUnused (blockSize);
 
-            // RMS window — base 300 ms; modulated by macro at runtime.
-            // Pre-allocate worst-case (longest window = ~2 s).
-            const int maxWin = (int) std::ceil (sr * 2.0);
-            sqBuf.assign ((size_t) juce::jmax (1, maxWin) + 4, 0.0f);
-            sqWritePos = 0;
-            sqSum      = 0.0;
-            curWinSize = juce::jmax (1, (int) std::round (sr * 0.3));
-
+            // Loudness detector: two cascaded one-pole mean-square stages
+            // (behaves like a ~window-length boxcar but never needs a reset
+            // when the window changes -- the old sliding window was cleared
+            // on every knob move, which made the leveler lurch).
+            ms1 = ms2 = 0.0f;
+            heldDb = 0.0f;
             envIn         = 0.0f;
             envOut        = 0.0f;
             smoothedGain  = 1.0f;
@@ -79,24 +77,11 @@ namespace na
             const float macroClamped = juce::jlimit (0.0f, 1.0f, macro);
 
             // ---- Macro mapping ------------------------------------------
-            // Window length: 600 ms (Soft) -> 250 ms (Locked).
-            // Smaller window = faster RMS response = more aggressive.
-            // Floor is 250 ms (not 120 ms) so the leveler tracks sustained
-            // level drift, not individual note envelopes.
-            const double winSec   = 0.600 - 0.350 * (double) macroClamped;
-            const int    winSize  = juce::jlimit (32,
-                                                  (int) sqBuf.size() - 4,
-                                                  (int) std::round (sampleRate * winSec));
-
-            // Resize window if it changed (also resets running sum to
-            // avoid drift / negative values from float error).
-            if (winSize != curWinSize)
-            {
-                curWinSize = winSize;
-                sqSum      = 0.0;
-                std::fill (sqBuf.begin(), sqBuf.end(), 0.0f);
-                sqWritePos = 0;
-            }
+            // Detector time: 600 ms (Soft) -> 250 ms (Locked). Faster
+            // detector = more aggressive. Floor is 250 ms so the leveler
+            // tracks sustained level drift, not individual note envelopes.
+            const double winSec = 0.600 - 0.350 * (double) macroClamped;
+            const float  msA    = (float) (1.0 - std::exp (-1.0 / (0.5 * winSec * sampleRate)));
 
             // Attack/release time constants. Attack faster than release.
             // Soft   : att 250 ms, rel 1500 ms
@@ -117,7 +102,7 @@ namespace na
             // Internal loudness target: -18 dBFS RMS. Output trim is
             // applied AFTER correction so the user can offset the final
             // output level without changing the leveling action.
-            const float targetRms   = juce::Decibels::decibelsToGain (-18.0f);
+            const float targetDb    = -18.0f;
             const float trimGain    = juce::Decibels::decibelsToGain (trimDb);
             const float envSmooth   = (float) (1.0 - std::exp (-1.0 / (0.020 * sampleRate)));
 
@@ -126,49 +111,50 @@ namespace na
             for (int c = 0; c < chClamp; ++c)
                 writePtrs[c] = buffer.getWritePointer (c);
 
-            const int   winSz  = curWinSize;
-            const int   bufSz  = (int) sqBuf.size();
-            const float invWin = 1.0f / (float) winSz;
-
             float pkIn = 0.0f, pkOut = 0.0f;
             float lastAppliedDb = juce::Decibels::gainToDecibels (smoothedGain, -60.0f);
             const float autoTarget = autoOn ? 1.0f : 0.0f;
+            const float invCh = 1.0f / (float) juce::jmax (1, chClamp);
+
+            // Output safety knee: transparent below -2 dBFS, tops out at 0 dBFS.
+            constexpr float knee = 0.7943f;
 
             for (int i = 0; i < n; ++i)
             {
                 autoBlend += (autoTarget - autoBlend) * autoBlendCoef;
 
-                // --- Mono-sum sample for RMS measurement ----------------
-                float mono = 0.0f;
-                for (int c = 0; c < chClamp; ++c) mono += writePtrs[c][i];
-                if (chClamp > 0) mono /= (float) chClamp;
+                // --- Mean square across channels (phase-proof) ----------
+                float sq = 0.0f, aIn = 0.0f;
+                for (int c = 0; c < chClamp; ++c)
+                {
+                    const float x = writePtrs[c][i];
+                    sq += x * x;
+                    aIn = juce::jmax (aIn, std::abs (x));
+                }
+                sq *= invCh;
 
-                const float sq = mono * mono;
-
-                // Sliding-window RMS via running sum of squares.
-                int rp = sqWritePos - winSz;
-                if (rp < 0) rp += bufSz;
-                const float oldSq = sqBuf[(size_t) rp];
-                sqSum += (double) sq - (double) oldSq;
-                sqBuf[(size_t) sqWritePos] = sq;
-                if (++sqWritePos >= bufSz) sqWritePos = 0;
-
-                // Guard against fp drift.
-                if (sqSum < 0.0) sqSum = 0.0;
-
-                const float meanSq = (float) (sqSum * (double) invWin);
-                const float rms    = std::sqrt (juce::jmax (1.0e-12f, meanSq));
+                ms1 += (sq  - ms1) * msA;
+                ms2 += (ms1 - ms2) * msA;
+                const float rms = std::sqrt (juce::jmax (1.0e-12f, ms2));
+                const float rmsDb = juce::Decibels::gainToDecibels (rms, -100.0f);
 
                 // --- Desired correction (dB) ----------------------------
-                float corrDb = juce::Decibels::gainToDecibels (targetRms / rms, -60.0f);
-                corrDb = juce::jlimit (-maxCutDb, maxBoostDb, corrDb);
+                float corrDb = juce::jlimit (-maxCutDb, maxBoostDb, targetDb - rmsDb);
 
-                // Below noise floor → don't try to lift silence.
-                if (rms < 1.0e-4f) corrDb = 0.0f;
+                // Gaps between phrases / silence: hold the gain we have
+                // instead of lifting the noise floor (or releasing to unity
+                // and pumping back on the next note).
+                if (rmsDb < targetDb - 30.0f)
+                    corrDb = heldDb;
 
-                // Deadband: ignore corrections smaller than 1 dB so the leveler
-                // doesn't chase minor fluctuations (which sounds wavy/pumpy).
-                if (std::abs (corrDb) < 1.0f) corrDb = 0.0f;
+                // Hold band: only move the target once the needed correction
+                // has drifted more than 1 dB from what we're holding. Unlike
+                // the old deadband (which snapped back to 0 dB) this never
+                // makes the target jump, so there's no wavy toggling.
+                if (std::abs (corrDb - heldDb) > 1.0f)
+                    heldDb = corrDb - std::copysign (1.0f, corrDb - heldDb);
+                heldDb = juce::jlimit (-maxCutDb, maxBoostDb, heldDb);
+                corrDb = heldDb;
 
                 const float targetGain = juce::Decibels::decibelsToGain (corrDb);
 
@@ -187,9 +173,9 @@ namespace na
                 {
                     float y = writePtrs[c][i] * applyGain;
 
-                    // Soft clipper for safety — only kicks in above ~-1 dB.
-                    if (y >  0.99f) y = 0.99f + std::tanh ((y - 0.99f) * 4.0f) * 0.01f;
-                    if (y < -0.99f) y = -0.99f + std::tanh ((y + 0.99f) * 4.0f) * 0.01f;
+                    const float ay = std::abs (y);
+                    if (ay > knee)
+                        y = std::copysign (knee + (1.0f - knee) * std::tanh ((ay - knee) / (1.0f - knee)), y);
 
                     writePtrs[c][i] = y;
 
@@ -197,7 +183,6 @@ namespace na
                     if (aOut > pkOut) pkOut = aOut;
                 }
 
-                const float aIn = std::abs (mono);
                 if (aIn > pkIn) pkIn = aIn;
 
                 lastAppliedDb = juce::Decibels::gainToDecibels (
@@ -221,10 +206,9 @@ namespace na
         double sampleRate { 48000.0 };
         int    channels   { 2 };
 
-        std::vector<float> sqBuf;
-        int    sqWritePos { 0 };
-        double sqSum      { 0.0 };
-        int    curWinSize { 0 };
+        float ms1    { 0.0f };
+        float ms2    { 0.0f };
+        float heldDb { 0.0f };
 
         float envIn        { 0.0f };
         float envOut       { 0.0f };

@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.22)
 
 project(AtiNAMatiCBoost VERSION 0.1.0)
 
@@ -92,6 +92,9 @@ target_sources(AtiNAMatiCBoost PRIVATE
     Source/BoostDSP.h
     Source/BoostLookAndFeel.h
 )
+
+# Shared ONE KNOB series code (DSP helpers + UI kit)
+target_include_directories(AtiNAMatiCBoost PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Shared")
 
 target_compile_definitions(AtiNAMatiCBoost PUBLIC
     JUCE_WEB_BROWSER=0

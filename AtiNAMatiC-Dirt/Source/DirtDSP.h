@@ -2,6 +2,7 @@
 
 #include <juce_audio_basics/juce_audio_basics.h>
 #include <juce_dsp/juce_dsp.h>
+#include <OneKnobDSP.h>
 #include <atomic>
 #include <cmath>
 
@@ -14,25 +15,24 @@ namespace nd
     //   - harmonic grit
     //
     // It is intentionally NOT a full distortion box. The DIRT macro (0..1)
-    // sweeps from clean → grit, but the wave-shaper is normalised so output
-    // peak stays roughly unity and loudness barely changes.
+    // sweeps from clean → grit while the loudness stays put.
     //
-    // Signal chain (per sample, per channel):
+    // Signal chain (per channel):
     //   1. DC blocker / sub tighten (HPF @ 40 Hz)
-    //   2. Pre-emphasis tilt — boosts upper-mids INTO the shaper so the grit
+    //   2. Pre-emphasis — boosts upper-mids INTO the shaper so the grit
     //      lands where guitars sing (depends on Type)
-    //   3. Drive gain (0..+22 dB driven by DIRT) feeding shaper
-    //   4. Asymmetric soft-clipper with controlled odd/even mix
-    //         Edge   : tanh — even, smooth breakup
-    //         Bite   : tanh + small hard-clip ceiling (sharper edge)
+    //   3. 4x oversampled shaper, unity small-signal gain (so DIRT changes
+    //      the amount of grit, not the volume). Drive -4..+24 dB.
+    //         Edge   : tanh — smooth breakup
+    //         Bite   : tanh into a sharper knee (more edge, still smooth)
     //         Crunch : tanh of a tanh (more compressed, fizzier upper grit)
-    //   5. De-emphasis (true inverse of pre-emphasis: same freq/Q, reciprocal
-    //      gain, so the tonal tilt is undone afterward and only the harmonic
-    //      content the shaper added is left behind)
-    //   6. Post-tone tilt — gently darkens as DIRT increases so it doesn't
-    //      get harsh (still keeps "alive" upper-mid bite)
-    //   7. Auto loudness make-up + user OUTPUT trim
-    //   8. Dry/wet MIX
+    //      Switching Type crossfades the two shapers over ~25 ms.
+    //   4. DC removal (the asymmetric bias creates an envelope-following
+    //      offset), then de-emphasis (true inverse of the pre-emphasis)
+    //   5. Post-tone tilt — gently darkens as DIRT increases
+    //   6. Static loudness compensation (computed from the curve at a typical
+    //      DI level -- pedal-style, never breathes), then user OUTPUT trim
+    //   7. Dry/wet MIX against a latency-aligned dry signal
     class DirtDSP
     {
     public:
@@ -43,20 +43,28 @@ namespace nd
         std::atomic<float> outputDb    { -90.0f };
         std::atomic<float> gritAmount  {   0.0f };  // 0..1 harmonic energy
 
+        int getLatencySamples() const { return latency; }
+
         void prepare (double sr, int blockSize, int numChannels)
         {
             sampleRate = sr;
-            channels   = juce::jmax (1, numChannels);
+            channels   = juce::jlimit (1, 8, numChannels);
+            maxBlock   = juce::jmax (blockSize, 32);
 
-            const juce::dsp::ProcessSpec spec {
-                sr, (juce::uint32) juce::jmax (blockSize, 32), (juce::uint32) channels
-            };
+            const juce::dsp::ProcessSpec spec { sr, (juce::uint32) maxBlock, (juce::uint32) channels };
 
             tightenHPF.reset();
             tightenHPF.prepare (spec);
             tightenHPF.setType (juce::dsp::StateVariableTPTFilterType::highpass);
             tightenHPF.setCutoffFrequency (40.0f);
             tightenHPF.setResonance (0.5f);
+
+            oversampler = std::make_unique<juce::dsp::Oversampling<float>> (
+                (size_t) channels, 2, juce::dsp::Oversampling<float>::filterHalfBandFIREquiripple, false, true);
+            oversampler->initProcessing ((size_t) maxBlock);
+            latency = (int) std::round (oversampler->getLatencyInSamples());
+            dryDelay.prepare (channels, latency + 1);
+            work.setSize (channels, maxBlock, false, true, false);
 
             preEmpCoefs   = juce::dsp::IIR::Coefficients<float>::makePeakFilter (sr, 1500.0f, 0.7f, 1.0f);
             deEmpCoefs    = juce::dsp::IIR::Coefficients<float>::makePeakFilter (sr, 1500.0f, 0.7f, 1.0f);
@@ -66,6 +74,7 @@ namespace nd
                 preEmp[c].reset();
                 deEmp[c].reset();
                 postTilt[c].reset();
+                dc[c].prepare (sr);
                 preEmp[c].coefficients   = preEmpCoefs;
                 deEmp[c].coefficients    = deEmpCoefs;
                 postTilt[c].coefficients = postTiltCoefs;
@@ -74,137 +83,183 @@ namespace nd
             targetPreEmp (Edge, smFreq, smGainDb);
             updatePreEmpCoeffs (smFreq, smGainDb);
             updatePostTilt (0.0f);
-            // ~30 ms block-rate smoothing on the pre/de-emphasis freq+gain so
-            // switching Type doesn't snap the filter coefficients mid-stream.
-            smTypeCoef = std::exp (-float (blockSize) / float (0.030 * sr));
+            // ~30 ms block-rate smoothing on the pre/de-emphasis freq+gain and
+            // the DIRT macro so nothing snaps mid-stream.
+            smTypeCoef = std::exp (-float (maxBlock) / float (0.030 * sr));
+            smDirt     = -1.0f;
 
-            envIn  = 0.0f;
-            envOut = 0.0f;
-            grit   = 0.0f;
+            curType  = prevType = Edge;
+            xfade    = 1.0f;
+            xfadeInc = 1.0f / float (0.025 * sr * 4.0);   // per oversampled sample
+
+            outGainSm.reset (sr, 0.02);
+            mixSm.reset (sr, 0.02);
+            outGainSm.setCurrentAndTargetValue (1.0f);
+            mixSm.setCurrentAndTargetValue (1.0f);
+
+            envIn = envOut = grit = 0.0f;
         }
 
         void process (juce::AudioBuffer<float>& buffer,
                       float dirt, int type, float mix, float outGainDb)
         {
+            const int total = buffer.getNumSamples();
+            for (int pos = 0; pos < total; pos += maxBlock)
+            {
+                juce::AudioBuffer<float> view (buffer.getArrayOfWritePointers(), buffer.getNumChannels(),
+                                               pos, juce::jmin (maxBlock, total - pos));
+                processChunk (view, dirt, type, mix, outGainDb);
+            }
+        }
+
+    private:
+        struct Shape { float drive, bias, tb, c1, norm, biteCeil; };
+
+        // All three curves pass through 0 with slope 1.
+        static inline float shape (Type t, float x, const Shape& s)
+        {
+            const float u = std::tanh (s.drive * x + s.bias) - s.tb;
+            switch (t)
+            {
+                case Bite:
+                {
+                    const float v = u * s.norm;                         // unity-slope tanh
+                    const float r = std::abs (v) / s.biteCeil;          // sharper knee at biteCeil
+                    return v / std::sqrt (std::sqrt (1.0f + r * r * r * r));
+                }
+                case Crunch:
+                    return (std::tanh (1.8f * (u + s.tb)) - s.c1) * s.norm;
+                case Edge:
+                default:
+                    return u * s.norm;
+            }
+        }
+
+        static Shape makeShape (Type t, float drive, float bias, float dirt)
+        {
+            Shape s;
+            s.drive    = drive;
+            s.bias     = bias;
+            s.tb       = std::tanh (bias);
+            s.c1       = std::tanh (1.8f * s.tb);
+            s.biteCeil = juce::jmax (0.35f, 1.0f - dirt * 0.5f) / drive;
+            const float sech2b = 1.0f - s.tb * s.tb;
+            if (t == Crunch)
+                s.norm = 1.0f / (drive * sech2b * 1.8f * (1.0f - s.c1 * s.c1));
+            else
+                s.norm = 1.0f / (drive * sech2b);
+            return s;
+        }
+
+        void processChunk (juce::AudioBuffer<float>& buffer,
+                           float dirt, int typeIn, float mix, float outGainDb)
+        {
             const int numCh = juce::jmin (channels, buffer.getNumChannels());
             const int n     = buffer.getNumSamples();
             if (numCh <= 0 || n <= 0) return;
 
+            smDirt = smDirt < 0.0f ? dirt : smTypeCoef * smDirt + (1.0f - smTypeCoef) * dirt;
+
             // --- Macro mapping -------------------------------------------
-            // dirt 0..1 → drive 0..+22 dB into the shaper.
-            const float driveDb = dirt * 22.0f;
-            const float drive   = juce::Decibels::decibelsToGain (driveDb);
-            const float invTanh = 1.0f / std::tanh (juce::jmax (1.0e-3f, drive));
+            const float drive = juce::Decibels::decibelsToGain (-4.0f + smDirt * 28.0f);
+            const float bias  = smDirt * 0.08f;   // 2nd-harmonic asymmetry
 
-            // 2nd-harmonic asymmetry — keeps it "alive" rather than buzzy.
-            const float bias    = dirt * 0.08f;
+            const Type type = (Type) juce::jlimit (0, 2, typeIn);
+            if (type != curType)
+            {
+                prevType = curType;
+                curType  = type;
+                xfade    = 0.0f;
+            }
+            const Shape sCur  = makeShape (curType,  drive, bias, smDirt);
+            const Shape sPrev = makeShape (prevType, drive, bias, smDirt);
 
-            // Soft hard-clip ceiling for Bite mode — sharpens the edge a touch.
-            // Larger means softer (further away). Scales out as dirt rises.
-            const float biteCeil = juce::jmax (0.6f, 1.4f - dirt * 0.8f);
-
-            // Auto make-up: keep loudness ~steady across the sweep.
-            const float autoMakeupDb = -driveDb * 0.85f;
-            const float outGain = juce::Decibels::decibelsToGain (autoMakeupDb + outGainDb);
-
-            // Smooth the pre/de-emphasis freq+gain toward the selected Type's
-            // target every block, instead of snapping coefficients the instant
-            // Type changes -- removes the audible filter-jump click.
             float targFreq, targGainDb;
-            targetPreEmp ((Type) type, targFreq, targGainDb);
+            targetPreEmp (type, targFreq, targGainDb);
             smFreq   = smTypeCoef * smFreq   + (1.0f - smTypeCoef) * targFreq;
             smGainDb = smTypeCoef * smGainDb + (1.0f - smTypeCoef) * targGainDb;
             updatePreEmpCoeffs (smFreq, smGainDb);
+            updatePostTilt (smDirt);
 
-            updatePostTilt (dirt);
+            // Static loudness compensation from the selected curve at a
+            // typical DI level: a pedal-style level match that never breathes.
+            const float comp = ok::referenceCompensation ([&] (float x) { return shape (curType, x, sCur); });
+            outGainSm.setTargetValue (comp * juce::Decibels::decibelsToGain (outGainDb));
+            mixSm.setTargetValue (mix);
 
-            const int chClamp = juce::jmin (numCh, 8);
-            float* writePtrs[8] = { nullptr };
-            for (int c = 0; c < chClamp; ++c)
-                writePtrs[c] = buffer.getWritePointer (c);
-
-            const float dryMul = 1.0f - mix;
-            const float wetMul = mix;
-
-            const float envA = (float) (1.0 - std::exp (-1.0 / (0.020 * sampleRate)));
-
-            float pkIn = 0.0f, pkOut = 0.0f, gritAcc = 0.0f;
-
-            for (int i = 0; i < n; ++i)
+            // 1-2) tighten + pre-emphasis (keep the raw input for dry/ref)
+            for (int c = 0; c < numCh; ++c)
             {
-                for (int c = 0; c < chClamp; ++c)
-                {
-                    const float xRaw = writePtrs[c][i];
-
-                    // 1) tighten
-                    const float xTight = tightenHPF.processSample (c, xRaw);
-
-                    // 2) pre-emphasis (boost into shaper)
-                    const float pre = preEmp[c].processSample (xTight);
-
-                    // 3) drive
-                    const float driven = pre * drive;
-
-                    // 4) shaper per type — all normalised to ~unity peak.
-                    float sat = 0.0f;
-                    switch ((Type) type)
-                    {
-                        case Bite:
-                        {
-                            const float t = (std::tanh (driven + bias) - std::tanh (bias)) * invTanh;
-                            // Soft hard-clip ceiling for sharper edge.
-                            sat = juce::jlimit (-biteCeil, biteCeil, t) / biteCeil;
-                            break;
-                        }
-                        case Crunch:
-                        {
-                            const float t1 = std::tanh (driven + bias);
-                            const float t2 = std::tanh (t1 * 1.8f);
-                            sat = (t2 - std::tanh (std::tanh (bias) * 1.8f)) * invTanh;
-                            break;
-                        }
-                        case Edge:
-                        default:
-                            sat = (std::tanh (driven + bias) - std::tanh (bias)) * invTanh;
-                            break;
-                    }
-
-                    // 5) de-emphasis (true inverse of pre-emphasis — see updatePreEmpCoeffs)
-                    const float deemp = deEmp[c].processSample (sat);
-
-                    // 6) post-tone tilt (slight darken as dirt rises)
-                    const float toned = postTilt[c].processSample (deemp);
-
-                    // 7) output trim + dry/wet mix
-                    const float wet = toned * outGain;
-                    const float y   = wet * wetMul + xRaw * dryMul;
-
-                    writePtrs[c][i] = y;
-
-                    if (c == 0)
-                    {
-                        const float aIn  = std::abs (xRaw);
-                        const float aOut = std::abs (y);
-                        if (aIn  > pkIn)  pkIn  = aIn;
-                        if (aOut > pkOut) pkOut = aOut;
-
-                        // "Grit" = how much the shaped sample diverges from
-                        // the unity-gain reference (i.e. harmonic content).
-                        gritAcc += std::abs (sat - xTight);
-                    }
-                }
+                work.copyFrom (c, 0, buffer, c, 0, n);
+                auto* d = buffer.getWritePointer (c);
+                for (int i = 0; i < n; ++i)
+                    d[i] = preEmp[c].processSample (tightenHPF.processSample (c, d[i]));
             }
 
+            // 3) oversampled shaper (with Type crossfade)
+            float gritNum = 0.0f, gritDen = 1.0e-9f;
+            {
+                juce::dsp::AudioBlock<float> block (buffer.getArrayOfWritePointers(), (size_t) numCh, (size_t) n);
+                auto up = oversampler->processSamplesUp (block);
+                const float xf0 = xfade;
+                float xfEnd = xf0;
+                for (size_t c = 0; c < up.getNumChannels(); ++c)
+                {
+                    auto* d = up.getChannelPointer (c);
+                    float xf = xf0;
+                    for (size_t i = 0; i < up.getNumSamples(); ++i)
+                    {
+                        const float x = d[i];
+                        float y = shape (curType, x, sCur);
+                        if (xf < 1.0f)
+                        {
+                            y = xf * y + (1.0f - xf) * shape (prevType, x, sPrev);
+                            xf = juce::jmin (1.0f, xf + xfadeInc);
+                        }
+                        if (c == 0)
+                        {
+                            gritNum += std::abs (y - x);
+                            gritDen += std::abs (x);
+                        }
+                        d[i] = y;
+                    }
+                    xfEnd = xf;
+                }
+                xfade = xfEnd;
+                oversampler->processSamplesDown (block);
+            }
+
+            // 4..7) DC, de-emphasis, tilt, loudness, trim, mix
+            float pkIn = 0.0f, pkOut = 0.0f;
+            for (int i = 0; i < n; ++i)
+            {
+                const float outGainNow = outGainSm.getNextValue();
+                const float mixNow     = mixSm.getNextValue();
+
+                for (int c = 0; c < numCh; ++c)
+                {
+                    float* d = buffer.getWritePointer (c);
+                    const float toned = postTilt[c].processSample (deEmp[c].processSample (dc[c].process (d[i])));
+                    const float xIn = work.getSample (c, i);
+                    const float dry = dryDelay.process (c, xIn, latency);
+                    const float y   = toned * outGainNow * mixNow + dry * (1.0f - mixNow);
+                    d[i] = y;
+                    pkIn  = juce::jmax (pkIn,  std::abs (xIn));
+                    pkOut = juce::jmax (pkOut, std::abs (y));
+                }
+                dryDelay.advance();
+            }
+
+            const float envA = (float) (1.0 - std::exp (-(double) n / (0.060 * sampleRate)));
             envIn  += (pkIn  - envIn)  * envA;
             envOut += (pkOut - envOut) * envA;
-            grit   += (juce::jmin (1.0f, gritAcc / juce::jmax (1, n) * (1.0f + dirt * 4.0f)) - grit) * envA;
+            grit   += (juce::jlimit (0.0f, 1.0f, (gritNum / gritDen) * 4.0f) - grit) * envA;
 
             inputDb.store    (juce::Decibels::gainToDecibels (envIn,  -90.0f), std::memory_order_relaxed);
             outputDb.store   (juce::Decibels::gainToDecibels (envOut, -90.0f), std::memory_order_relaxed);
             gritAmount.store (juce::jlimit (0.0f, 1.0f, grit),                 std::memory_order_relaxed);
         }
 
-    private:
         // Pre-emphasis target: focuses the grit in the upper-mid region
         // appropriate to the chosen Type.
         static void targetPreEmp (Type t, float& freq, float& gainDb)
@@ -219,40 +274,49 @@ namespace nd
         }
 
         // Applies the pre-emphasis boost and its genuine inverse (same freq/Q,
-        // reciprocal gain) for the de-emphasis stage.
+        // reciprocal gain) for the de-emphasis stage. ArrayCoefficients keep
+        // this allocation-free on the audio thread.
         void updatePreEmpCoeffs (float freq, float gainDb)
         {
             constexpr float q = 0.7f;
-            *preEmpCoefs = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (
+            *preEmpCoefs = juce::dsp::IIR::ArrayCoefficients<float>::makePeakFilter (
                 sampleRate, freq, q, juce::Decibels::decibelsToGain (gainDb));
-            *deEmpCoefs = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (
+            *deEmpCoefs = juce::dsp::IIR::ArrayCoefficients<float>::makePeakFilter (
                 sampleRate, freq, q, juce::Decibels::decibelsToGain (-gainDb));
         }
 
         void updatePostTilt (float dirt)
         {
             // Gentle high-shelf cut as dirt rises — keeps the result musical.
-            const float cutDb = -dirt * 2.0f;
-            *postTiltCoefs = *juce::dsp::IIR::Coefficients<float>::makeHighShelf (
-                sampleRate, 6500.0f, 0.7f,
-                juce::Decibels::decibelsToGain (cutDb));
+            *postTiltCoefs = juce::dsp::IIR::ArrayCoefficients<float>::makeHighShelf (
+                sampleRate, 6500.0f, 0.7f, juce::Decibels::decibelsToGain (-dirt * 2.0f));
         }
 
         double sampleRate { 48000.0 };
         int    channels   { 2 };
+        int    maxBlock   { 512 };
+        int    latency    { 0 };
 
         juce::dsp::StateVariableTPTFilter<float> tightenHPF;
+        std::unique_ptr<juce::dsp::Oversampling<float>> oversampler;
+        juce::AudioBuffer<float> work;
+        ok::DelayLine dryDelay;
+        std::array<ok::DcBlocker, 8> dc;
 
         juce::ReferenceCountedObjectPtr<juce::dsp::IIR::Coefficients<float>> preEmpCoefs, deEmpCoefs, postTiltCoefs;
         std::array<juce::dsp::IIR::Filter<float>, 8> preEmp;
         std::array<juce::dsp::IIR::Filter<float>, 8> deEmp;
         std::array<juce::dsp::IIR::Filter<float>, 8> postTilt;
 
-        // Block-rate smoothed pre/de-emphasis target (eliminates the
-        // coefficient-jump click when switching Type).
-        float smFreq   { 1500.0f };
-        float smGainDb {    4.0f };
+        float smFreq     { 1500.0f };
+        float smGainDb   {    4.0f };
         float smTypeCoef { 0.0f };
+        float smDirt     { -1.0f };
+
+        Type  curType  { Edge }, prevType { Edge };
+        float xfade    { 1.0f }, xfadeInc { 0.001f };
+
+        juce::SmoothedValue<float> outGainSm, mixSm;
 
         float envIn   { 0.0f };
         float envOut  { 0.0f };

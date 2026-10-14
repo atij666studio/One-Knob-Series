@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.22)
 
 project(AtiNAMatiCAir VERSION 0.1.0)
 
@@ -95,6 +95,9 @@ target_sources(AtiNAMatiCAir PRIVATE
     Source/AirDSP.h
     Source/AirLookAndFeel.h
 )
+
+# Shared ONE KNOB series code (DSP helpers + UI kit)
+target_include_directories(AtiNAMatiCAir PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Shared")
 
 target_compile_definitions(AtiNAMatiCAir PUBLIC
     JUCE_WEB_BROWSER=0

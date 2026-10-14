@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.22)
 
 project(AtiNAMatiCHitZone VERSION 0.1.0)
 
@@ -94,6 +94,9 @@ target_sources(AtiNAMatiCHitZone PRIVATE
     Source/MeterComponent.h
     Source/HitZoneLookAndFeel.h
 )
+
+# Shared ONE KNOB series code (DSP helpers + UI kit)
+target_include_directories(AtiNAMatiCHitZone PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Shared")
 
 target_compile_definitions(AtiNAMatiCHitZone PUBLIC
     JUCE_WEB_BROWSER=0

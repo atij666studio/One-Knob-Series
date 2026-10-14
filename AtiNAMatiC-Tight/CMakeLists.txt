@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.22)
 
 project(AtiNAMatiCTight VERSION 0.1.0)
 
@@ -91,6 +91,9 @@ target_sources(AtiNAMatiCTight PRIVATE
     Source/TightDSP.h
     Source/TightLookAndFeel.h
 )
+
+# Shared ONE KNOB series code (DSP helpers + UI kit)
+target_include_directories(AtiNAMatiCTight PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../Shared")
 
 target_compile_definitions(AtiNAMatiCTight PUBLIC
     JUCE_WEB_BROWSER=0

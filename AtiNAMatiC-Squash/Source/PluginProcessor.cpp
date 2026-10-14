@@ -53,6 +53,10 @@ void NAMSquashProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
     const int numCh = juce::jmax (getTotalNumInputChannels(), getTotalNumOutputChannels());
     dsp.prepare (sampleRate, samplesPerBlock, numCh);
     dryBuffer.setSize (numCh, samplesPerBlock, false, false, true);
+    mixSm.reset (sampleRate, 0.02);
+    outSm.reset (sampleRate, 0.02);
+    mixSm.setCurrentAndTargetValue (apvts.getRawParameterValue (pid::mix)->load());
+    outSm.setCurrentAndTargetValue (juce::Decibels::decibelsToGain (apvts.getRawParameterValue (pid::output)->load()));
 }
 
 void NAMSquashProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer&)
@@ -77,21 +81,31 @@ void NAMSquashProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::M
     dsp.squash.store (squashVal);
     dsp.modeIx.store (modeVal);
 
-    // Save dry for parallel mix (pre-allocated in prepareToPlay -- no audio-thread allocation)
-    for (int ch = 0; ch < numCh; ++ch)
-        dryBuffer.copyFrom (ch, 0, buffer, ch, 0, n);
+    mixSm.setTargetValue (mixVal);
+    outSm.setTargetValue (juce::Decibels::decibelsToGain (outDbVal));
 
-    // Compress in-place
-    dsp.process (buffer);
-
-    // Wet/dry blend + output trim
-    const float outGain = std::pow (10.0f, outDbVal * 0.05f);
-    for (int ch = 0; ch < numCh; ++ch)
+    // Chunked so the dry copy always fits the buffer reserved in prepareToPlay.
+    const int cap = juce::jmax (1, dryBuffer.getNumSamples());
+    for (int pos = 0; pos < n; pos += cap)
     {
-        auto*       wp = buffer.getWritePointer (ch);
-        const auto* dp = dryBuffer.getReadPointer (ch);
-        for (int i = 0; i < n; ++i)
-            wp[i] = (dp[i] * (1.0f - mixVal) + wp[i] * mixVal) * outGain;
+        const int len = juce::jmin (cap, n - pos);
+        juce::AudioBuffer<float> view (buffer.getArrayOfWritePointers(), numCh, pos, len);
+
+        for (int ch = 0; ch < numCh; ++ch)
+            dryBuffer.copyFrom (ch, 0, view, ch, 0, len);
+
+        dsp.process (view);
+
+        for (int i = 0; i < len; ++i)
+        {
+            const float m = mixSm.getNextValue();
+            const float g = outSm.getNextValue();
+            for (int ch = 0; ch < numCh; ++ch)
+            {
+                auto* wp = view.getWritePointer (ch);
+                wp[i] = (dryBuffer.getSample (ch, i) * (1.0f - m) + wp[i] * m) * g;
+            }
+        }
     }
 }
 
