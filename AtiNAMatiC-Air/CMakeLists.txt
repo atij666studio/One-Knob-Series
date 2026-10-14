@@ -85,6 +85,9 @@ juce_generate_juce_header(AtiNAMatiCAir)
 
 juce_add_binary_data(AtiNAMatiCAirData SOURCES
     Resources/Background.png
+    ../Shared/Fonts/BarlowCondensed-Medium.ttf
+    ../Shared/Fonts/BarlowCondensed-SemiBold.ttf
+    ../Shared/Fonts/IBMPlexMono-Medium.ttf
 )
 
 target_sources(AtiNAMatiCAir PRIVATE
@@ -93,7 +96,9 @@ target_sources(AtiNAMatiCAir PRIVATE
     Source/PluginEditor.cpp
     Source/PluginEditor.h
     Source/AirDSP.h
-    Source/AirLookAndFeel.h
+    ../Shared/OneKnobDSP.h
+    ../Shared/OneKnobParams.h
+    ../Shared/OneKnobUI.h
 )
 
 # Shared ONE KNOB series code (DSP helpers + UI kit)

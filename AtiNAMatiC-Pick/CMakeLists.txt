@@ -80,6 +80,9 @@ juce_generate_juce_header(AtiNAMatiCPick)
 
 juce_add_binary_data(AtiNAMatiCPickData SOURCES
     Resources/Background.png
+    ../Shared/Fonts/BarlowCondensed-Medium.ttf
+    ../Shared/Fonts/BarlowCondensed-SemiBold.ttf
+    ../Shared/Fonts/IBMPlexMono-Medium.ttf
 )
 
 target_sources(AtiNAMatiCPick PRIVATE
@@ -88,7 +91,9 @@ target_sources(AtiNAMatiCPick PRIVATE
     Source/PluginEditor.cpp
     Source/PluginEditor.h
     Source/PickDSP.h
-    Source/PickLookAndFeel.h
+    ../Shared/OneKnobDSP.h
+    ../Shared/OneKnobParams.h
+    ../Shared/OneKnobUI.h
 )
 
 # Shared ONE KNOB series code (DSP helpers + UI kit)

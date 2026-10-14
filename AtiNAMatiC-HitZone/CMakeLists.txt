@@ -83,6 +83,9 @@ juce_generate_juce_header(AtiNAMatiCHitZone)
 
 juce_add_binary_data(AtiNAMatiCHitZoneData SOURCES
     Resources/Background.png
+    ../Shared/Fonts/BarlowCondensed-Medium.ttf
+    ../Shared/Fonts/BarlowCondensed-SemiBold.ttf
+    ../Shared/Fonts/IBMPlexMono-Medium.ttf
 )
 
 target_sources(AtiNAMatiCHitZone PRIVATE
@@ -91,8 +94,9 @@ target_sources(AtiNAMatiCHitZone PRIVATE
     Source/PluginEditor.cpp
     Source/PluginEditor.h
     Source/HitZoneDSP.h
-    Source/MeterComponent.h
-    Source/HitZoneLookAndFeel.h
+    ../Shared/OneKnobDSP.h
+    ../Shared/OneKnobParams.h
+    ../Shared/OneKnobUI.h
 )
 
 # Shared ONE KNOB series code (DSP helpers + UI kit)

@@ -12,11 +12,17 @@ namespace sq
 
     inline float dbToGain (float db) { return std::pow (10.0f, db * 0.05f); }
 
+    // Make-up calibration: reference level and how much of its gain
+    // reduction to give back.
+    constexpr float kMakeupRefDb  = -18.0f;
+    constexpr float kMakeupAmount = 1.0f;
+
     // ---- Feedforward RMS compressor, stereo-linked ----
     // Thresholds are set for real-world guitar / bus levels (-24..-12 dBFS
     // RMS): roughly 2-4 dB of gain reduction around the middle of the knob,
-    // heavy compression at the top. Make-up follows the measured gain
-    // reduction so the loudness stays put while you turn the knob.
+    // heavy compression at the top. Static make-up matches the gain
+    // reduction of a typical bus level, so the loudness stays put while you
+    // turn the knob.
     class SquashDSP
     {
     public:
@@ -46,19 +52,13 @@ namespace sq
             // 5 ms RMS window (fast enough to catch pick transients)
             rmsCoef = std::exp (-1.0f / float (0.005 * sr));
 
-            // Auto make-up follows the *actual* average gain reduction
-            // (~1.5 s average, only while there's signal), so it matches
-            // loudness at any input level instead of assuming 0 dBFS.
-            grAvgCoef   = 1.0f - std::exp (-1.0f / float (1.5 * sr));
-            grAvgDb     = 0.0f;
-            makeupDbNow = 0.0f;
+
         }
 
         void reset()
         {
             for (auto& cs : chState) { cs.meanSq = 0.0f; cs.gainSmooth = 1.0f; }
             grDisplay = 0.0f;
-            grAvgDb = makeupDbNow = 0.0f;
             grDb.store (0.0f);
         }
 
@@ -85,7 +85,7 @@ namespace sq
 
             const float attCoef  = std::exp (-1.0f / float (smAttMs  * 0.001 * sampleRate));
             const float relCoef  = std::exp (-1.0f / float (smRelMs  * 0.001 * sampleRate));
-            const float makeupCap = smMakeup;   // upper bound from the knob mapping
+            const float makeupLin = dbToGain (smMakeup);
             const float halfKnee = smKneeDb * 0.5f;
 
             float peakGrDb = 0.0f;   // worst GR this block
@@ -132,10 +132,7 @@ namespace sq
                 const float coef = (targetGr < gs) ? attCoef : relCoef;
                 gs = coef * gs + (1.0f - coef) * targetGr;
 
-                if (inputDb > -50.0f)
-                    grAvgDb += (-20.0f * std::log10 (juce::jmax (gs, 1.0e-6f)) - grAvgDb) * grAvgCoef;
-                makeupDbNow += (juce::jlimit (0.0f, makeupCap, grAvgDb) - makeupDbNow) * grAvgCoef;
-                const float g = gs * dbToGain (makeupDbNow);
+                const float g = gs * makeupLin;
 
                 for (int ch = 0; ch < numCh; ++ch)
                     buffer.getWritePointer (ch)[i] *= g;
@@ -195,11 +192,12 @@ namespace sq
                     break;
             }
 
-            // Upper bound for the adaptive make-up (the actual amount follows
-            // the measured gain reduction). Scales with se so the knob at 0
-            // is truly transparent.
-            const float rawMakeup = -threshDb * (1.0f - 1.0f / ratio);
-            makeupDb = se * juce::jlimit (0.0f, 20.0f, rawMakeup);
+            // Static make-up: the gain reduction a typical bus level gets
+            // (calibrated on amp-sim guitar, ~+/-1 dB across the knob).
+            // Static on purpose -- an adaptive make-up drifts for seconds
+            // after every loud passage, which is audible on a bus.
+            const float overRef = juce::jmax (0.0f, kMakeupRefDb - threshDb);
+            makeupDb = juce::jlimit (0.0f, 20.0f, overRef * (1.0f - 1.0f / ratio) * kMakeupAmount);
         }
 
         double sampleRate { 44100.0 };
@@ -222,9 +220,6 @@ namespace sq
 
         float grDisplay     { 0.0f };
 
-        float grAvgCoef   { 0.0f };
-        float grAvgDb     { 0.0f };
-        float makeupDbNow { 0.0f };
 
     };
 }

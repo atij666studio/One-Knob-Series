@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <OneKnobParams.h>
 
 using APVTS = juce::AudioProcessorValueTreeState;
 
@@ -19,16 +20,16 @@ APVTS::ParameterLayout NAMTightProcessor::createLayout()
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
     params.push_back (std::make_unique<P> (juce::ParameterID { pid::tight, 1 },
-        "Tight", juce::NormalisableRange<float> (0.0f, 1.0f, 0.0001f), 0.5f));
+        "Tight", juce::NormalisableRange<float> (0.0f, 1.0f, 0.0001f), 0.5f, ok::percent()));
 
     params.push_back (std::make_unique<C> (juce::ParameterID { pid::mode, 1 },
         "Mode", juce::StringArray { "Classic", "Modern", "Extreme" }, 1));
 
     params.push_back (std::make_unique<P> (juce::ParameterID { pid::mix, 1 },
-        "Mix", juce::NormalisableRange<float> (0.0f, 1.0f, 0.0001f), 1.0f));
+        "Mix", juce::NormalisableRange<float> (0.0f, 1.0f, 0.0001f), 1.0f, ok::percent()));
 
     params.push_back (std::make_unique<P> (juce::ParameterID { pid::output, 1 },
-        "Output", juce::NormalisableRange<float> (-24.0f, 24.0f, 0.01f), 0.0f));
+        "Output", juce::NormalisableRange<float> (-24.0f, 24.0f, 0.01f), 0.0f, ok::decibels()));
 
     return { params.begin(), params.end() };
 }
@@ -84,6 +85,7 @@ void NAMTightProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mi
     dsp.tight.store  (tightVal);
     dsp.modeIx.store (modeVal);
 
+    updateMeters (buffer, numCh, true);
     mixSm.setTargetValue (mixVal);
     outSm.setTargetValue (juce::Decibels::decibelsToGain (outDbVal));
 
@@ -114,6 +116,18 @@ void NAMTightProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::Mi
             }
         }
     }
+    updateMeters (buffer, numCh, false);
+}
+
+void NAMTightProcessor::updateMeters (const juce::AudioBuffer<float>& b, int numCh, bool input)
+{
+    float pk = 0.0f;
+    for (int ch = 0; ch < numCh; ++ch)
+        pk = juce::jmax (pk, b.getMagnitude (ch, 0, b.getNumSamples()));
+    auto& env = input ? inEnv : outEnv;
+    const float a = (float) (1.0 - std::exp (-(double) b.getNumSamples() / (0.06 * getSampleRate())));
+    env += (pk - env) * a;
+    (input ? inMeterDb : outMeterDb).store (juce::Decibels::gainToDecibels (env, -90.0f), std::memory_order_relaxed);
 }
 
 juce::AudioProcessorEditor* NAMTightProcessor::createEditor()

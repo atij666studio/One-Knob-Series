@@ -38,7 +38,13 @@ public:
 
     static juce::AudioProcessorValueTreeState::ParameterLayout createLayout();
 
+    // Input / output peak meters (dBFS, ~60 ms ballistics) for the editor.
+    std::atomic<float> inMeterDb { -90.0f }, outMeterDb { -90.0f };
+
 private:
+    float inEnv { 0.0f }, outEnv { 0.0f };
+    void updateMeters (const juce::AudioBuffer<float>& b, int numCh, bool input);
+
     juce::AudioBuffer<float> dryBuffer;
     juce::SmoothedValue<float> mixSm, outSm;
 

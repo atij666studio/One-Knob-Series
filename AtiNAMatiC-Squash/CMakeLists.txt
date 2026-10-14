@@ -77,6 +77,9 @@ juce_generate_juce_header(AtiNAMatiCSquash)
 
 juce_add_binary_data(AtiNAMatiCSquashData SOURCES
     Resources/Background.png
+    ../Shared/Fonts/BarlowCondensed-Medium.ttf
+    ../Shared/Fonts/BarlowCondensed-SemiBold.ttf
+    ../Shared/Fonts/IBMPlexMono-Medium.ttf
 )
 
 target_sources(AtiNAMatiCSquash PRIVATE
@@ -85,7 +88,9 @@ target_sources(AtiNAMatiCSquash PRIVATE
     Source/PluginEditor.cpp
     Source/PluginEditor.h
     Source/SquashDSP.h
-    Source/SquashLookAndFeel.h
+    ../Shared/OneKnobDSP.h
+    ../Shared/OneKnobParams.h
+    ../Shared/OneKnobUI.h
 )
 
 # Shared ONE KNOB series code (DSP helpers + UI kit)

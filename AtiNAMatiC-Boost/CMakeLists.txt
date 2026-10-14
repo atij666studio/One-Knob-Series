@@ -82,6 +82,9 @@ juce_generate_juce_header(AtiNAMatiCBoost)
 
 juce_add_binary_data(AtiNAMatiCBoostData SOURCES
     Resources/Background.png
+    ../Shared/Fonts/BarlowCondensed-Medium.ttf
+    ../Shared/Fonts/BarlowCondensed-SemiBold.ttf
+    ../Shared/Fonts/IBMPlexMono-Medium.ttf
 )
 
 target_sources(AtiNAMatiCBoost PRIVATE
@@ -90,7 +93,9 @@ target_sources(AtiNAMatiCBoost PRIVATE
     Source/PluginEditor.cpp
     Source/PluginEditor.h
     Source/BoostDSP.h
-    Source/BoostLookAndFeel.h
+    ../Shared/OneKnobDSP.h
+    ../Shared/OneKnobParams.h
+    ../Shared/OneKnobUI.h
 )
 
 # Shared ONE KNOB series code (DSP helpers + UI kit)

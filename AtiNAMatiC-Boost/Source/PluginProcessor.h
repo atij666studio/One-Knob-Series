@@ -18,7 +18,7 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
     bool hasEditor() const override                  { return true; }
 
-    const juce::String getName() const override      { return "NAM Boost"; }
+    const juce::String getName() const override      { return "AtiNAMatiC-Boost"; }
     bool acceptsMidi()  const override               { return false; }
     bool producesMidi() const override               { return false; }
     bool isMidiEffect() const override               { return false; }

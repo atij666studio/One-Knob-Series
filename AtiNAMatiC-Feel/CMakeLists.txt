@@ -91,6 +91,9 @@ juce_generate_juce_header(AtiNAMatiCFeel)
 
 juce_add_binary_data(AtiNAMatiCFeelData SOURCES
     Resources/Background.png
+    ../Shared/Fonts/BarlowCondensed-Medium.ttf
+    ../Shared/Fonts/BarlowCondensed-SemiBold.ttf
+    ../Shared/Fonts/IBMPlexMono-Medium.ttf
 )
 
 target_sources(AtiNAMatiCFeel PRIVATE
@@ -99,7 +102,9 @@ target_sources(AtiNAMatiCFeel PRIVATE
     Source/PluginEditor.cpp
     Source/PluginEditor.h
     Source/FeelDSP.h
-    Source/FeelLookAndFeel.h
+    ../Shared/OneKnobDSP.h
+    ../Shared/OneKnobParams.h
+    ../Shared/OneKnobUI.h
 )
 
 # Shared ONE KNOB series code (DSP helpers + UI kit)

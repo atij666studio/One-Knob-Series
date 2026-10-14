@@ -193,7 +193,7 @@ namespace nb
             const float envA = (float) (1.0 - std::exp (-(double) n / (0.060 * sampleRate)));
             envIn  += (pkIn  - envIn)  * envA;
             envOut += (pkOut - envOut) * envA;
-            const float sparkNow = juce::jlimit (0.0f, 1.0f, (sparkNum / sparkDen) * 6.0f);
+            const float sparkNow = juce::jlimit (0.0f, 1.0f, std::sqrt (sparkNum / sparkDen) * 2.5f);
             spark  += (sparkNow - spark) * envA;
 
             inputDb.store     (juce::Decibels::gainToDecibels (envIn,  -90.0f), std::memory_order_relaxed);

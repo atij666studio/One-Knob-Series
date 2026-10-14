@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <OneKnobParams.h>
 
 using APVTS = juce::AudioProcessorValueTreeState;
 
@@ -21,22 +22,22 @@ APVTS::ParameterLayout AtiNAMatiCHitZoneProcessor::createLayout()
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
     params.push_back (std::make_unique<P> (juce::ParameterID { pid::sweetSpot, 1 },
-        "Sweet Spot", juce::NormalisableRange<float> (0.0f, 1.0f, 0.0001f), 0.5f));
+        "Sweet Spot", juce::NormalisableRange<float> (0.0f, 1.0f, 0.0001f), 0.5f, ok::percent()));
 
     params.push_back (std::make_unique<B> (juce::ParameterID { pid::autoOn, 1 },
         "Auto", true));
 
     params.push_back (std::make_unique<P> (juce::ParameterID { pid::response, 1 },
-        "Response", juce::NormalisableRange<float> (0.0f, 1.0f, 0.0001f), 0.35f));
+        "Response", juce::NormalisableRange<float> (0.0f, 1.0f, 0.0001f), 0.35f, ok::percent()));
 
     params.push_back (std::make_unique<P> (juce::ParameterID { pid::mix, 1 },
-        "Mix", juce::NormalisableRange<float> (0.0f, 1.0f, 0.0001f), 1.0f));
+        "Mix", juce::NormalisableRange<float> (0.0f, 1.0f, 0.0001f), 1.0f, ok::percent()));
 
     params.push_back (std::make_unique<P> (juce::ParameterID { pid::output, 1 },
-        "Output", juce::NormalisableRange<float> (-24.0f, 24.0f, 0.01f), 0.0f));
+        "Output", juce::NormalisableRange<float> (-24.0f, 24.0f, 0.01f), 0.0f, ok::decibels()));
 
     params.push_back (std::make_unique<P> (juce::ParameterID { pid::manualGain, 1 },
-        "Manual Gain", juce::NormalisableRange<float> (-24.0f, 24.0f, 0.01f), 0.0f));
+        "Manual Gain", juce::NormalisableRange<float> (-24.0f, 24.0f, 0.01f), 0.0f, ok::decibels()));
 
     return { params.begin(), params.end() };
 }

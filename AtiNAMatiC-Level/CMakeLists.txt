@@ -96,6 +96,9 @@ juce_generate_juce_header(AtiNAMatiCLevel)
 
 juce_add_binary_data(AtiNAMatiCLevelData SOURCES
     Resources/Background.png
+    ../Shared/Fonts/BarlowCondensed-Medium.ttf
+    ../Shared/Fonts/BarlowCondensed-SemiBold.ttf
+    ../Shared/Fonts/IBMPlexMono-Medium.ttf
 )
 
 target_sources(AtiNAMatiCLevel PRIVATE
@@ -104,7 +107,9 @@ target_sources(AtiNAMatiCLevel PRIVATE
     Source/PluginEditor.cpp
     Source/PluginEditor.h
     Source/LevelDSP.h
-    Source/LevelLookAndFeel.h
+    ../Shared/OneKnobDSP.h
+    ../Shared/OneKnobParams.h
+    ../Shared/OneKnobUI.h
 )
 
 # Shared ONE KNOB series code (DSP helpers + UI kit)

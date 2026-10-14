@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <OneKnobParams.h>
 
 namespace
 {
@@ -15,17 +16,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout NAMLevelProcessor::createLay
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { kLevel, 1 }, "Level",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.50f,
-        juce::AudioParameterFloatAttributes()
-            .withStringFromValueFunction ([] (float v, int) {
-                return juce::String (juce::roundToInt (v * 100.0f)) + "%";
-            })));
+        ok::percent()));
 
     layout.add (std::make_unique<juce::AudioParameterBool> (
         juce::ParameterID { kAuto, 1 }, "Auto", true));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { kTrim, 1 }, "Trim",
-        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.01f), 0.0f));
+        juce::NormalisableRange<float> (-12.0f, 12.0f, 0.01f), 0.0f, ok::decibels()));
 
     return layout;
 }

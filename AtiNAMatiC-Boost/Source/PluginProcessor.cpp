@@ -1,5 +1,6 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
+#include <OneKnobParams.h>
 
 namespace
 {
@@ -16,10 +17,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout NAMBoostProcessor::createLay
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { kBoost, 1 }, "Boost",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 0.35f,
-        juce::AudioParameterFloatAttributes()
-            .withStringFromValueFunction ([] (float v, int) {
-                return juce::String (juce::roundToInt (v * 100.0f)) + "%";
-            })));
+        ok::percent()));
 
     layout.add (std::make_unique<juce::AudioParameterChoice> (
         juce::ParameterID { kMode, 1 }, "Character",
@@ -28,14 +26,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout NAMBoostProcessor::createLay
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { kMix, 1 }, "Mix",
         juce::NormalisableRange<float> (0.0f, 1.0f, 0.001f), 1.0f,
-        juce::AudioParameterFloatAttributes()
-            .withStringFromValueFunction ([] (float v, int) {
-                return juce::String (juce::roundToInt (v * 100.0f)) + "%";
-            })));
+        ok::percent()));
 
     layout.add (std::make_unique<juce::AudioParameterFloat> (
         juce::ParameterID { kOutput, 1 }, "Output",
-        juce::NormalisableRange<float> (-24.0f, 12.0f, 0.01f), 0.0f));
+        juce::NormalisableRange<float> (-24.0f, 12.0f, 0.01f), 0.0f, ok::decibels()));
 
     return layout;
 }

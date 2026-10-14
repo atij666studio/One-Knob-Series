@@ -85,6 +85,9 @@ juce_generate_juce_header(AtiNAMatiCDirt)
 
 juce_add_binary_data(AtiNAMatiCDirtData SOURCES
     Resources/Background.png
+    ../Shared/Fonts/BarlowCondensed-Medium.ttf
+    ../Shared/Fonts/BarlowCondensed-SemiBold.ttf
+    ../Shared/Fonts/IBMPlexMono-Medium.ttf
 )
 
 target_sources(AtiNAMatiCDirt PRIVATE
@@ -93,7 +96,9 @@ target_sources(AtiNAMatiCDirt PRIVATE
     Source/PluginEditor.cpp
     Source/PluginEditor.h
     Source/DirtDSP.h
-    Source/DirtLookAndFeel.h
+    ../Shared/OneKnobDSP.h
+    ../Shared/OneKnobParams.h
+    ../Shared/OneKnobUI.h
 )
 
 # Shared ONE KNOB series code (DSP helpers + UI kit)

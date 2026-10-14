@@ -253,7 +253,7 @@ namespace nd
             const float envA = (float) (1.0 - std::exp (-(double) n / (0.060 * sampleRate)));
             envIn  += (pkIn  - envIn)  * envA;
             envOut += (pkOut - envOut) * envA;
-            grit   += (juce::jlimit (0.0f, 1.0f, (gritNum / gritDen) * 4.0f) - grit) * envA;
+            grit   += (juce::jlimit (0.0f, 1.0f, std::sqrt (gritNum / gritDen) * 2.2f) - grit) * envA;
 
             inputDb.store    (juce::Decibels::gainToDecibels (envIn,  -90.0f), std::memory_order_relaxed);
             outputDb.store   (juce::Decibels::gainToDecibels (envOut, -90.0f), std::memory_order_relaxed);

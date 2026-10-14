@@ -81,6 +81,9 @@ juce_generate_juce_header(AtiNAMatiCTight)
 
 juce_add_binary_data(AtiNAMatiCTightData SOURCES
     Resources/Background.png
+    ../Shared/Fonts/BarlowCondensed-Medium.ttf
+    ../Shared/Fonts/BarlowCondensed-SemiBold.ttf
+    ../Shared/Fonts/IBMPlexMono-Medium.ttf
 )
 
 target_sources(AtiNAMatiCTight PRIVATE
@@ -89,7 +92,9 @@ target_sources(AtiNAMatiCTight PRIVATE
     Source/PluginEditor.cpp
     Source/PluginEditor.h
     Source/TightDSP.h
-    Source/TightLookAndFeel.h
+    ../Shared/OneKnobDSP.h
+    ../Shared/OneKnobParams.h
+    ../Shared/OneKnobUI.h
 )
 
 # Shared ONE KNOB series code (DSP helpers + UI kit)

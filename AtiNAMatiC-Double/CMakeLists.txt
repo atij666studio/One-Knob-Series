@@ -94,6 +94,9 @@ juce_generate_juce_header(AtiNAMatiCDouble)
 
 juce_add_binary_data(AtiNAMatiCDoubleData SOURCES
     Resources/Background.png
+    ../Shared/Fonts/BarlowCondensed-Medium.ttf
+    ../Shared/Fonts/BarlowCondensed-SemiBold.ttf
+    ../Shared/Fonts/IBMPlexMono-Medium.ttf
 )
 
 target_sources(AtiNAMatiCDouble PRIVATE
@@ -102,7 +105,9 @@ target_sources(AtiNAMatiCDouble PRIVATE
     Source/PluginEditor.cpp
     Source/PluginEditor.h
     Source/DoubleDSP.h
-    Source/DoubleLookAndFeel.h
+    ../Shared/OneKnobDSP.h
+    ../Shared/OneKnobParams.h
+    ../Shared/OneKnobUI.h
 )
 
 # Shared ONE KNOB series code (DSP helpers + UI kit)
