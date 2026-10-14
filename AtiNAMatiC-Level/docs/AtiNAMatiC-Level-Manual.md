@@ -1,5 +1,13 @@
 # AtiNAMatiC-Level — User Manual
-**Version 0.1.0**  |  Atij 666 Studio
+**Version 0.2.0**  |  Atij 666 Studio
+
+---
+
+## What's new in v0.2.0
+
+- **No more lurching or pumping.** Moving the LEVEL knob used to wipe the loudness detector, briefly releasing the gain; and the 1 dB deadband snapped the target back to 0 dB, so levels hovering near ±1 dB toggled (the "wavy" sound). The detector is now continuous and the deadband holds its value instead of snapping.
+- Gaps and silence no longer get boosted (the gain holds when the signal falls 30 dB below target). The output safety stage is now a smooth knee from -2 dBFS instead of a near-hard clip at -0.1 dBFS.
+- **New interface** — machined knob with a printed 0–10 scale, hardware-style mode switches that follow automation and preset recall, consistent value text ("72 %", "+1.5 dB"), resizable window (75–150 %, remembered per session). Double-click any knob to reset it; hold **Shift** while dragging for fine adjustment.
 
 ---
 
@@ -37,9 +45,9 @@ The LEVEL knob simultaneously scales three internal parameters:
 
 | Parameter | Soft (0%) | Locked (100%) |
 |-----------|-----------|---------------|
-| RMS window | 600 ms | 120 ms |
+| Detector time | 600 ms | 250 ms |
 | Attack time | 250 ms | 20 ms |
-| Release time | 1500 ms | 150 ms |
+| Release time | 1500 ms | 400 ms |
 | Max correction | ±4 dB | ±18 dB |
 
 - **Soft** — slow, gentle leveling. Preserves pick dynamics and natural swells. Good for clean tones and recordings where you want to feel the playing.
@@ -97,7 +105,7 @@ The LED dot glows brighter as correction increases.
 
 ### Windows — Installer
 
-1. Run **AtiNAMatiC-Level-v0.1.0-Setup.exe**.
+1. Run **AtiNAMatiC-Level-v0.2.0-Setup.exe**.
 2. Select the formats you want (VST3, CLAP, Standalone).
 3. Complete the wizard.
 4. Rescan your DAW for new plugins (see table below).
@@ -148,10 +156,10 @@ The LED dot glows brighter as correction increases.
 ```
 Input
   │
-  ├─► RMS Measurement (sliding window, length ∝ LEVEL)
+  ├─► RMS Measurement (two-stage smoothed, time ∝ LEVEL)
   │         │
   │         ▼
-  │   Correction dB = clamp(target/rms, ±maxRange)
+  │   Correction dB = clamp(target/rms, ±maxRange), 1 dB hold band, held in gaps
   │         │
   │         ▼
   │   Asymmetric smoothing (attack < release)
@@ -161,7 +169,7 @@ Input
   │
   ├─► TRIM gain
   │
-  ├─► Soft clipper (safety, kicks in above −0.1 dBFS)
+  ├─► Safety knee (smooth, from −2 dBFS, tops out at 0 dBFS)
   │
 Output
 ```

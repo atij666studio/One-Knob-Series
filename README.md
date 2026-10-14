@@ -24,6 +24,11 @@ Each plug-in does one thing exceptionally well, controlled by a single knob.
 | **AtiNAMatiC-Squash** | Bus and mix compressor — glue and punch for the final mix |
 | **AtiNAMatiC-Tight** | Low-end tightener — controls flub and mud in downtuned or high-gain rigs |
 
+**Recommended chain order** (also the catalogue number shown in each plug-in):
+`01 Gate → 02 Tight → 03 Pick → 04 Feel → 05 HitZone → 06 Boost → 07 Dirt → [amp sim] → 08 Air → 09 Double → 10 Squash → 11 Level`
+
+See [AUDIT.md](AUDIT.md) for the v0.2.0 audit: measured issues, fixes and remaining recommendations.
+
 ---
 
 ## Download
@@ -79,7 +84,7 @@ sudo apt-get install -y cmake ninja-build build-essential pkg-config \
 cd AtiNAMatiC-Air
 .\build.ps1
 ```
-Builds VST3 + CLAP in Release, then runs Inno Setup automatically if installed, producing `Installer\Output\AtiNAMatiC-Air-Setup-0.1.0.exe`.
+Builds VST3 + CLAP in Release, then runs Inno Setup automatically if installed, producing `Installer\Output\AtiNAMatiC-Air-Setup-0.2.0.exe`.
 
 ### macOS (Universal Binary)
 ```bash
@@ -105,8 +110,8 @@ GitHub Actions builds all platforms automatically on every push.
 To cut a release, push a version tag:
 
 ```bash
-git tag v0.1.0
-git push origin v0.1.0
+git tag v0.2.0
+git push origin v0.2.0
 ```
 
 This triggers the Release workflow, builds all 4 platform targets, and publishes a GitHub Release with signed artifacts for every format.

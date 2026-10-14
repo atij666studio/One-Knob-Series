@@ -1,12 +1,21 @@
 # AtiNAMatiC-Boost — User Manual
-**Version 0.1.0**
+**Version 0.2.0**
 Atij 666 Studio — Designed & developed by Atij
+
+---
+
+## What's new in v0.2.0
+
+- **Constant loudness, clean at 0 %.** BOOST now stays within about ±1 dB across the whole sweep (it used to drop ~3 dB and lose ~10 dB of peak level at PUSH, and add +1.8 dB at 0 %). At CLEAN the curve is effectively linear.
+- **4× oversampling** on the saturation stage removes the harsh aliasing that a following amp sim would otherwise amplify. This adds **38 samples** of latency (≈0.8 ms at 48 kHz), reported to your DAW for automatic compensation; the dry path of MIX is delay-matched.
+- DC from the asymmetric (2nd-harmonic) bias is now removed, so there are no low-frequency thumps on note attacks.
+- **New interface** — machined knob with a printed 0–10 scale, hardware-style mode switches that follow automation and preset recall, consistent value text ("72 %", "+1.5 dB"), resizable window (75–150 %, remembered per session). Double-click any knob to reset it; hold **Shift** while dragging for fine adjustment.
 
 ---
 
 ## Overview
 
-**AtiNAMatiC-Boost** adds life, punch, and harmonic clarity to any signal — designed to sit after your NAM amp sim or anywhere in your chain where you want musical saturation, presence, and dynamic energy.
+**AtiNAMatiC-Boost** adds life, punch, and harmonic clarity to any signal — designed to sit **before** your NAM amp sim (it is voiced to feed an amp model), though it also works anywhere you want musical saturation and presence.
 
 Unlike a simple booster, it uses a three-stage soft-saturation engine with character modes and parallel mix control, so you can push the tone without destroying your dynamics.
 
@@ -27,7 +36,7 @@ Unlike a simple booster, it uses a three-stage soft-saturation engine with chara
 ## Installation
 
 ### Windows — Using the Installer (Recommended)
-Run **AtiNAMatiC-Boost-v0.1.0-Setup.exe** and follow the on-screen steps.
+Run **AtiNAMatiC-Boost-v0.2.0-Setup.exe** and follow the on-screen steps.
 
 The installer places files at:
 
@@ -194,7 +203,7 @@ Use **BRIGHT** mode with **BOOST 60–80 %** and **MIX 60 %**. Keeps the dry att
 
 ## About
 
-**AtiNAMatiC-Boost v0.1.0**
+**AtiNAMatiC-Boost v0.2.0**
 Atij 666 Studio
 Designed & developed by Atij
 

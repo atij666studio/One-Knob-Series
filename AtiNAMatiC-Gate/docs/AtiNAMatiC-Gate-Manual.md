@@ -1,6 +1,13 @@
 # AtiNAMatiC-Gate -- User Manual
 
-**Version 0.1.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+**Version 0.2.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+
+---
+
+## What's new in v0.2.0
+
+- **ADAPTIVE now adapts in every case.** The noise-floor tracker could only learn while the gate was closed — so if the noise itself held the gate open from the start, Adaptive never raised the threshold. It now also learns from anything quieter than -50 dBFS.
+- **New interface** — machined knob with a printed 0–10 scale, hardware-style mode switches that follow automation and preset recall, consistent value text ("72 %", "+1.5 dB"), resizable window (75–150 %, remembered per session). Double-click any knob to reset it; hold **Shift** while dragging for fine adjustment.
 
 ---
 
@@ -135,7 +142,7 @@ At 44.1 kHz the lookahead is 132 samples. At 48 kHz it is 144 samples. At 96 kHz
 
 ### Windows -- using the installer
 
-1. Run **AtiNAMatiC-Gate-Setup-0.1.0.exe** as Administrator.
+1. Run **AtiNAMatiC-Gate-Setup-0.2.0.exe** as Administrator.
 2. Select the formats to install (Standalone is always included):
    - **VST3 plug-in** installs to `C:\Program Files\Common Files\VST3\AtiNAMatiC-Gate.vst3`
    - **CLAP plug-in** installs to `C:\Program Files\Common Files\CLAP\AtiNAMatiC-Gate.clap`

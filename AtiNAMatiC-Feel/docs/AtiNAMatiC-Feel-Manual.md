@@ -1,6 +1,15 @@
 # AtiNAMatiC-Feel -- User Manual
 
-**Version 0.1.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+**Version 0.2.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+
+---
+
+## What's new in v0.2.0
+
+- **Actually tames pick spikes now.** The compressor uses a peak-hold detector with near-instant attack, so spikes come out smaller instead of larger (the old 3.5–18 ms attacks let the first half-millisecond of every attack through at full make-up gain). Still zero latency.
+- **No more low-note distortion.** Both detectors used to ripple with the waveform on low notes (up to -22 dB THD on a low E); distortion is now below -60 dB.
+- Make-up gain is now calibrated on DI guitar so the level stays within about ±1 dB across the ASSIST sweep; detection is stereo-linked (loudest channel).
+- **New interface** — machined knob with a printed 0–10 scale, hardware-style mode switches that follow automation and preset recall, consistent value text ("72 %", "+1.5 dB"), resizable window (75–150 %, remembered per session). Double-click any knob to reset it; hold **Shift** while dragging for fine adjustment.
 
 ---
 
@@ -11,9 +20,9 @@ AtiNAMatiC-Feel is a **feel enhancer** designed to be placed *before* your amp s
 Under the hood it is a three-stage processing chain:
 
 - **DC blocker (HPF @ 25 Hz)** -- removes subsonic rumble and DC offset so the compressor envelope is never confused by non-audio content.
-- **Transient softener** -- a dual-envelope (1.5 ms fast / 30 ms slow) detector finds the exact spike of each pick attack and applies up to 4 dB of gentle duck, only during the initial milliseconds. Long sustain passes completely unaffected.
+- **Transient softener** -- a dual-envelope (1.5 ms fast / 20 ms slow attack, shared release) detector finds the exact spike of each pick attack and applies up to 5 dB of gentle duck, only during the initial milliseconds. Long sustain passes completely unaffected.
 - **Feedforward soft-knee compressor (log-domain)** -- a single-sidechain stereo-coherent compressor with an auto-threshold that descends as ASSIST rises. Ratio and knee widen simultaneously, giving a smooth, consistent squeeze rather than sudden gain clamps. Stereo image is preserved because both channels share the same gain envelope from the left/right detection chain.
-- **Auto make-up gain** -- compensates 70% of the static gain reduction measured at a -12 dBFS reference, so the output stays perceptually level across the full ASSIST sweep.
+- **Auto make-up gain** -- static, calibrated on DI guitar (gain reduction at a -4.5 dBFS peak reference), so the output stays within about ±1 dB across the full ASSIST sweep.
 
 Zero latency. No lookahead. No oversampling. Behaves identically to an analogue insert in front of your amp sim.
 
@@ -55,9 +64,9 @@ Shapes the character of both the transient softener and compressor:
 
 | Mode      | Comp attack | Comp release | Max ratio | Transient cut | Best for |
 |-----------|------------|--------------|-----------|---------------|---------|
-| **Tight** | 3.5 ms     | 80 ms        | 2.5:1     | minimal (×0.25) | Articulate playing where you want punch preserved. Palm mutes stay tight and percussive. |
-| **Even** (default) | 8 ms | 130 ms | 3:1 | moderate (×0.6) | Balanced response that works for most styles -- rhythm and lead alike. |
-| **Smooth** | 18 ms    | 220 ms       | 4:1       | maximum (×1.0) | Heavy softening for laid-back playing, heavily distorted tones, or when you want everything to feel effortless. |
+| **Tight** | near-instant | 90 ms      | 2.5:1     | minimal (×0.25) | Articulate playing where you want punch preserved. Palm mutes stay tight and percussive. |
+| **Even** (default) | near-instant | 130 ms | 3:1 | moderate (×0.6) | Balanced response that works for most styles -- rhythm and lead alike. |
+| **Smooth** | ~0.1 ms  | 220 ms       | 4:1       | maximum (×1.0) | Heavy softening for laid-back playing, heavily distorted tones, or when you want everything to feel effortless. |
 
 ### OUTPUT (-24 to +12 dB, default 0 dB)
 
@@ -138,7 +147,7 @@ No lookahead buffer, no oversampling delay, no latency compensation needed. The 
 
 ### Windows -- using the installer
 
-1. Run **AtiNAMatiC-Feel-Setup-0.1.0.exe** as Administrator.
+1. Run **AtiNAMatiC-Feel-Setup-0.2.0.exe** as Administrator.
 2. Select the formats to install (Standalone is always included):
    - **VST3 plug-in** installs to `C:\Program Files\Common Files\VST3\AtiNAMatiC-Feel.vst3`
    - **CLAP plug-in** installs to `C:\Program Files\Common Files\CLAP\AtiNAMatiC-Feel.clap`
@@ -216,7 +225,7 @@ Input
                          • Ratio     = 1 + ASSIST × (mode_ratioMax − 1)
                          • Knee      = mode_kneeDb  (soft, applied at ±knee/2 around threshold)
                          • Envelope  = attack when GR increases, release when GR decreases
-                              └─ Auto make-up gain  (0.7 × static GR at −12 dBFS reference)
+                              └─ Auto make-up gain  (static GR at −4.5 dBFS peak reference)
                                    └─ OUTPUT trim
 Output
 ```
@@ -266,4 +275,4 @@ Thank you to everyone who makes open-source audio tools possible.
 
 ---
 
-*AtiNAMatiC-Feel v0.1.0 · Atij 666 Studio · 2026*
+*AtiNAMatiC-Feel v0.2.0 · Atij 666 Studio · 2026*

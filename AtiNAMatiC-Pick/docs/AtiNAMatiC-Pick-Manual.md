@@ -1,6 +1,14 @@
 # AtiNAMatiC-Pick — User Manual
 
-**Version 0.1.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+**Version 0.2.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+
+---
+
+## What's new in v0.2.0
+
+- **No fuzz on low notes.** The two envelope followers now share one release, so on sustained notes they move together and only real pick attacks are shaped (they used to ripple at the note frequency and modulate the gain).
+- Make-up gain is calibrated so the level stays within ±0.2 dB across the whole SOFT–SHARP range (SOFT used to drop ~3 dB). MIX and OUTPUT are smoothed; detection is stereo-linked.
+- **New interface** — machined knob with a printed 0–10 scale, hardware-style mode switches that follow automation and preset recall, consistent value text ("72 %", "+1.5 dB"), resizable window (75–150 %, remembered per session). Double-click any knob to reset it; hold **Shift** while dragging for fine adjustment.
 
 ---
 
@@ -13,7 +21,7 @@ Under the hood it is a four-stage chain:
 - **Dual envelope follower** — a fast peak follower (1.5 ms attack / 25 ms release) and a slow follower (40 ms / 220 ms) run in parallel. The ratio `(fast − slow) / slow` produces a level-invariant transient strength `T` that peaks near 1.0 on a typical guitar attack and falls back to 0 during sustain.
 - **Per-sample gain modulation** — the transient strength drives gain by `g = 1 + A · 0.7 · T` where `A` is the knob mapped to ±1. Sharp settings amplify transient peaks; Soft settings attenuate them. Sustained material is untouched.
 - **Tilt EQ** — a subtle ±2 dB tilt scales with the knob. Sharp adds a high-shelf lift @ 4 kHz; Soft adds a gentle low-shelf lift @ 160 Hz. Filter coefficients are re-tuned per block with a small change threshold so the audio never zippers.
-- **Auto make-up** — a tiny constant trim (-0.5 dB × |A|) keeps perceived loudness roughly steady across the full sweep.
+- **Auto make-up** — calibrated on DI guitar so the level stays within ±0.2 dB across the full SOFT–SHARP sweep.
 
 Zero latency. No lookahead. No oversampling. Mono or stereo input, always stereo gain shared from the left channel so the stereo image stays glued.
 
@@ -104,7 +112,7 @@ Dual horizontal meters at the bottom of the panel (−60 to 0 dBFS) show the inp
 
 ### Windows — Using the Installer (Recommended)
 
-Run **AtiNAMatiC-Pick-v0.1.0-Setup.exe** and follow the on-screen steps.
+Run **AtiNAMatiC-Pick-v0.2.0-Setup.exe** and follow the on-screen steps.
 
 The installer places files at:
 

@@ -1,6 +1,14 @@
 # AtiNAMatiC-Tight -- User Manual
 
-**Version 0.1.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+**Version 0.2.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+
+---
+
+## What's new in v0.2.0
+
+- **Transient shaper rebuilt.** It now uses one stereo-linked detector with a shared release (no more gain ripple / fuzz on low notes) and tops out at about +6 dB on attacks instead of +9 dB, which produced +11–14 dB spikes into the amp.
+- Removed a memory allocation that happened on the audio thread every block (a potential source of dropouts); MIX and OUTPUT are smoothed; new input/output meters.
+- **New interface** — machined knob with a printed 0–10 scale, hardware-style mode switches that follow automation and preset recall, consistent value text ("72 %", "+1.5 dB"), resizable window (75–150 %, remembered per session). Double-click any knob to reset it; hold **Shift** while dragging for fine adjustment.
 
 ---
 
@@ -62,9 +70,9 @@ Sets the overall aggressiveness of the processing at any given TIGHT value.
 
 | Mode        | HPF range  | Low-mid dip (max) | Presence (max) | Transient peak (max) | Best for |
 |-------------|------------|------------------|----------------|---------------------|----------|
-| **Classic** | 45--110 Hz | -3 dB            | +1.5 dB        | gentle              | Clean tones, vintage amp sims, jazz, country -- you want tightness without losing warmth. |
-| **Modern**  | 55--150 Hz | -5.5 dB          | +3 dB          | standard            | The default. Modern high-gain, rock, metal -- balanced tightness and presence. |
-| **Extreme** | 70--220 Hz | -8 dB            | +4.5 dB        | aggressive          | Djent, drop-tuned 7/8 string, heavily saturated amp sims -- you need maximum clarity under extreme gain. |
+| **Classic** | 45--110 Hz | -3 dB            | +1.5 dB        | ~+2.7 dB            | Clean tones, vintage amp sims, jazz, country -- you want tightness without losing warmth. |
+| **Modern**  | 55--150 Hz | -5.5 dB          | +3 dB          | ~+5 dB              | The default. Modern high-gain, rock, metal -- balanced tightness and presence. |
+| **Extreme** | 70--220 Hz | -8 dB            | +4.5 dB        | ~+6.6 dB            | Djent, drop-tuned 7/8 string, heavily saturated amp sims -- you need maximum clarity under extreme gain. |
 
 Switching MODE at any TIGHT setting produces an immediate change in character. If you find that TIGHT above 60% becomes too thin in a particular mode, drop to the mode below rather than reducing TIGHT.
 
@@ -104,7 +112,7 @@ The dB scale runs from -60 dB to 0 dB in 10 dB steps.
 ## 6. Installation
 
 ### Windows Installer (recommended)
-1. Run `AtiNAMatiC-Tight-Setup-0.1.0.exe`.
+1. Run `AtiNAMatiC-Tight-Setup-0.2.0.exe`.
 2. Select the formats you need (Standalone, VST3, CLAP) and follow the wizard.
 3. After installation completes, a message reminds you to rescan your DAW.
 
@@ -167,7 +175,7 @@ Input
   |      Gain: 0 to +1.5 / +3.0 / +4.5 dB (Classic / Modern / Extreme) × TIGHT
   |
   +-- [Transient shaper]
-         Fast envelope (1 ms attack) vs. slow envelope (30 ms attack)
+         Fast envelope (1 ms attack) vs. slow envelope (30 ms attack), shared 120 ms release, stereo-linked
          Differential gain scales with MODE aggressiveness × TIGHT
   |
   +-- [MIX: parallel blend with dry input]

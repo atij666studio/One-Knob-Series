@@ -1,6 +1,15 @@
 # AtiNAMatiC-Dirt -- User Manual
 
-**Version 0.1.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+**Version 0.2.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+
+---
+
+## What's new in v0.2.0
+
+- **Steady loudness, clean at 0 %.** The drive is now -4 to +24 dB into a unity-slope shaper with curve-derived (static, pedal-style) loudness compensation. The old version jumped +5.7 dB at 0 % in CRUNCH and fell by up to 5 dB at 100 %.
+- **4× oversampling** — aliasing at high DIRT was as loud as -12 dB below the note; it is now far lower. Adds **38 samples** of latency (≈0.8 ms at 48 kHz), reported to the host; MIX's dry path is delay-matched.
+- Switching TYPE now crossfades the shapers (no click); DIRT, MIX and OUTPUT are all smoothed.
+- **New interface** — machined knob with a printed 0–10 scale, hardware-style mode switches that follow automation and preset recall, consistent value text ("72 %", "+1.5 dB"), resizable window (75–150 %, remembered per session). Double-click any knob to reset it; hold **Shift** while dragging for fine adjustment.
 
 ---
 
@@ -33,7 +42,7 @@ Guitar  ->  [AtiNAMatiC-Dirt]  ->  NAM Amp Model  ->  Cab / IR  ->  AtiNAMatiC-A
 ## 3. The Controls
 
 ### DIRT (large knob, centre)
-The master drive macro. Sweeps from 0% (clean pass-through) to 100% (full harmonic grit). Internally this maps to 0 to +22 dB of drive gain into the wave-shaper, with automatic make-up applied so the output level stays roughly steady across the entire sweep.
+The master drive macro. Sweeps from 0% (clean pass-through) to 100% (full harmonic grit). Internally this maps to -4 to +24 dB of drive into a 4× oversampled wave-shaper, with curve-derived loudness compensation so the output level stays steady across the entire sweep.
 
 Most players live between **20% and 55%**. Above 70% the grit becomes deliberate and pronounced -- useful for high-gain styles feeding a clean NAM model.
 
@@ -82,7 +91,7 @@ Linux builds (VST3 + CLAP) available via `build-linux.sh`.
 ## 5. Installation
 
 ### Windows -- Installer (recommended)
-1. Run `AtiNAMatiC-Dirt-Setup-0.1.0.exe` (requires administrator rights).
+1. Run `AtiNAMatiC-Dirt-Setup-0.2.0.exe` (requires administrator rights).
 2. Choose which formats to install:
    - **Standalone** -- runs as a normal application, no DAW needed.
    - **VST3** -- installs to `C:\Program Files\Common Files\VST3\`.

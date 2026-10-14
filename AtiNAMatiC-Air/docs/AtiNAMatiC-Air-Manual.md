@@ -1,6 +1,14 @@
 # AtiNAMatiC-Air — User Manual
 
-**Version 0.1.0** · Atij 666 Studio · Windows (Standalone & VST3)
+**Version 0.2.0** · Atij 666 Studio · Windows (Standalone & VST3)
+
+---
+
+## What's new in v0.2.0
+
+- **Real depth on mono sources.** A guitar coming out of a mono amp sim has no side signal, so the old M/S widening produced no stereo image at all. Air now builds its depth from a short, mono-safe early-reflection pattern written only into the side channel (Studio: 2–12 ms, Room: 5–29 ms, lows below 150 Hz kept centred). Summing to mono gives exactly the dry-plus-EQ signal back. It is still not a reverb — there is no tail.
+- The integer-step Haas delay (which zippered when the knob moved) is gone; the depth meter now shows the side-to-mid energy you actually hear.
+- **New interface** — machined knob with a printed 0–10 scale, hardware-style mode switches that follow automation and preset recall, consistent value text ("72 %", "+1.5 dB"), resizable window (75–150 %, remembered per session). Double-click any knob to reset it; hold **Shift** while dragging for fine adjustment.
 
 ---
 
@@ -10,7 +18,7 @@ AtiNAMatiC-Air is a post-cab "amp-in-the-room" enhancer designed to sit **after*
 
 1. **Air** — high-shelf lift (10 kHz) plus a 5 kHz presence peak that brings the cab out of the speaker and into the room.
 2. **Body** — a gentle 80 Hz peak (Room mode only) that adds the low-mid bloom you hear when standing in front of a real 4×12.
-3. **Width** — M/S widening with an optional Haas-style side delay (Room mode) for a deeper, more three-dimensional stereo image.
+3. **Width & depth** — M/S widening plus a short, mono-safe early-reflection pattern in the side channel (more in Room mode), so even a mono amp sim gets a three-dimensional image.
 
 It is **not** a reverb. It does not add tail. It re-creates the perceptual cues that make a recorded cab feel like a real amp in a real room.
 
@@ -34,13 +42,13 @@ The master macro. From 0 to 100% it simultaneously increases:
 - Presence peak at 5 kHz (0 → +2 dB)
 - Body peak at 80 Hz (Room mode only, 0 → +2.5 dB)
 - Stereo widening (Studio: +0–40% sides · Room: +0–70% sides)
-- Haas side delay (Room mode only, 0.8–4.3 ms)
+- Early-reflection depth in the side channel (Studio: 2–12 ms, Room: 5–29 ms), mono-safe
 
 Most users live between **30% and 65%**. Above 70% the widening becomes deliberately exaggerated for "WIDE" mix moments.
 
 ### MODE (Studio / Room)
-- **STUDIO** — Tighter, narrower, no body peak, no Haas. Use for dry mixes, tight metal rhythms, double-tracked guitars where mono compatibility matters.
-- **ROOM** — Adds the 80 Hz body peak and a Haas-style side delay that fakes the ear-distance cues of standing in a real room. Use for leads, ambient parts, and any track that needs to feel "live".
+- **STUDIO** — Tighter, narrower, no body peak, a few very short reflections. Use for dry mixes, tight metal rhythms, double-tracked guitars where mono compatibility matters.
+- **ROOM** — Adds the 80 Hz body peak and a longer early-reflection pattern that recreates the ear-distance cues of standing in a real room. Use for leads, ambient parts, and any track that needs to feel "live".
 
 ### MIX (Wet/Dry)
 0% = bypass, 100% = full wet. Default 100%. Lower it to blend in just a touch of air without changing the EQ balance of your dry cab.
@@ -119,7 +127,7 @@ Make sure something is actually feeding the plug-in (NAM upstream, track armed/p
 Drop AIR. Above 70% with a bright cab IR the 10 kHz shelf can stack up. Try 35–50% first.
 
 **"It feels narrower than expected"**  
-Check that your DAW track is stereo. On a mono track the Standalone widening still works (the M/S decode produces sides from the same channel pair), but in your DAW the channel must be stereo for the width to be heard.
+Check that your DAW track (or the insert) is stereo. Air creates its depth from a mono source, but it needs a stereo output to put it in; on a mono track only the EQ is heard.
 
 **"Plug-in is missing after install"**  
 Force a VST3 rescan in your DAW (see section 5). Some hosts cache old scan results.

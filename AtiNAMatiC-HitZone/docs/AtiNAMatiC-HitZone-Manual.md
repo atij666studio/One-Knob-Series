@@ -1,6 +1,15 @@
 # AtiNAMatiC-HitZone — User Manual
 
-**Version 0.1.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+**Version 0.2.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+
+---
+
+## What's new in v0.2.0
+
+- **Auto gain fixed.** The auto loop compared the *input* level with the target and kept adding the same error every block, so it ran to the ±24 dB limit instead of settling. It now regulates the level *after* its gain, settles on the -16 dBFS RMS target, and holds its gain through silence instead of winding up between phrases.
+- **Peak protection.** A loud hit after a quiet passage is caught instantly (block-peak ceiling + near-instant gain drop), with a smooth safety knee above -3 dBFS in Auto mode.
+- The status label and meter now show the level *going into your amp* (after HitZone's gain), which is what "in the zone" means. The SWEET SPOT tone shelves now reach their setting immediately (they used to take tens of seconds).
+- **New interface** — machined knob with a printed 0–10 scale, hardware-style mode switches that follow automation and preset recall, consistent value text ("72 %", "+1.5 dB"), resizable window (75–150 %, remembered per session). Double-click any knob to reset it; hold **Shift** while dragging for fine adjustment.
 
 ---
 
@@ -166,7 +175,7 @@ The COLD and HOT labels at the left and right of the knob area indicate the tona
 
 ### Windows — Installer (recommended)
 
-1. Run **AtiNAMatiC-HitZone-Setup-0.1.0.exe**
+1. Run **AtiNAMatiC-HitZone-Setup-0.2.0.exe**
 2. Choose the formats you want: **Standalone**, **VST3**, and/or **CLAP**
 3. Click Install
 4. After installation a dialog will remind you to rescan plug-ins in your DAW

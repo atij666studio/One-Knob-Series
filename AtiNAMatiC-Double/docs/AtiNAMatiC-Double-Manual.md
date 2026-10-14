@@ -1,6 +1,14 @@
 # AtiNAMatiC-Double -- User Manual
 
-**Version 0.1.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+**Version 0.2.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+
+---
+
+## What's new in v0.2.0
+
+- **0 % is now true mono.** The doubled voices fade out below 15 %, so the MONO end no longer adds a centred, comb-filtered copy.
+- Width changes are smoothed per sample (no zipper noise), the voices no longer glide in pitch for a few seconds after loading, and each voice has a slightly different tone so they read as two takes rather than two copies.
+- **New interface** — machined knob with a printed 0–10 scale, hardware-style mode switches that follow automation and preset recall, consistent value text ("72 %", "+1.5 dB"), resizable window (75–150 %, remembered per session). Double-click any knob to reset it; hold **Shift** while dragging for fine adjustment.
 
 ---
 
@@ -104,7 +112,7 @@ Located below the mode picker, the STEREO IMAGE panel gives real-time visual fee
 
 ### Windows -- Installer (recommended)
 
-1. Run **AtiNAMatiC-Double-Setup-0.1.0.exe**.
+1. Run **AtiNAMatiC-Double-Setup-0.2.0.exe**.
 2. Select the formats you want (Standalone, VST3, CLAP).
 3. Click Install.
 4. **Rescan plug-ins in your DAW** (see table below).

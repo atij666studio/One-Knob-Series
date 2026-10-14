@@ -1,5 +1,13 @@
-﻿# AtiNAMatiC-Squash — User Manual
-**Version 0.1.0**  |  Atij 666 Studio
+# AtiNAMatiC-Squash — User Manual
+**Version 0.2.0**  |  Atij 666 Studio
+
+---
+
+## What's new in v0.2.0
+
+- **Compression at real-world levels.** The old thresholds assumed a very hot signal: on a typical guitar bus Gentle and Standard barely compressed at all, while the auto make-up added up to +9 dB. Thresholds are re-mapped (tables below) and make-up is calibrated so loudness stays within about ±1 dB across the knob.
+- Faster 5 ms RMS detector, stereo-linked gain, smoothed MIX/OUTPUT, and new input/output meters.
+- **New interface** — machined knob with a printed 0–10 scale, hardware-style mode switches that follow automation and preset recall, consistent value text ("72 %", "+1.5 dB"), resizable window (75–150 %, remembered per session). Double-click any knob to reset it; hold **Shift** while dragging for fine adjustment.
 
 ---
 
@@ -42,7 +50,7 @@ At **Light (0%)** the plugin is essentially transparent: threshold is high, rati
 
 At **Heavy (100%)** the threshold drops to its lowest point, ratio climbs to the mode maximum, attack tightens to its fastest, and (in Standard and Smash modes) the knee hardens.
 
-Auto makeup gain is applied proportionally: at Light the gain is unity, and it scales up toward Heavy to compensate for perceived loudness reduction. The gain is applied *after* the time-constant smoother so mode switches never cause gain pumping.
+Auto makeup gain is static and calibrated for a typical guitar-bus level (around -18 dBFS RMS), so loudness stays within about ±1 dB as you turn the knob. It is applied *after* the time-constant smoother so mode switches never cause gain pumping.
 
 ---
 
@@ -53,8 +61,8 @@ Slow, transparent bus glue with a wide soft knee. Preserves pick dynamics and na
 
 | Parameter | Light (0%) | Heavy (100%) |
 |-----------|------------|--------------|
-| Threshold | -3 dB | -14 dB |
-| Ratio | 1.5 : 1 | 4 : 1 |
+| Threshold | -12 dB | -30 dB |
+| Ratio | 1.5 : 1 | 3 : 1 |
 | Attack | 50 ms | 12 ms |
 | Release | 300 ms | 80 ms |
 | Knee | 8 dB | 4 dB |
@@ -64,7 +72,7 @@ All-purpose character: snappy but musical. Covers the widest range of applicatio
 
 | Parameter | Light (0%) | Heavy (100%) |
 |-----------|------------|--------------|
-| Threshold | -6 dB | -22 dB |
+| Threshold | -14 dB | -34 dB |
 | Ratio | 2 : 1 | 8 : 1 |
 | Attack | 25 ms | 3 ms |
 | Release | 200 ms | 40 ms |
@@ -75,7 +83,7 @@ Aggressive, fast, and tight. Very low thresholds, high ratios, near-zero attack.
 
 | Parameter | Light (0%) | Heavy (100%) |
 |-----------|------------|--------------|
-| Threshold | -9 dB | -30 dB |
+| Threshold | -16 dB | -40 dB |
 | Ratio | 4 : 1 | 20 : 1 |
 | Attack | 8 ms | 0.5 ms |
 | Release | 100 ms | 15 ms |
@@ -115,7 +123,7 @@ The meter has **instant attack** and **100 ms visual release**, giving a fast, r
 
 ### Windows - Installer
 
-1. Run **AtiNAMatiC-Squash-Setup-0.1.0.exe**.
+1. Run **AtiNAMatiC-Squash-Setup-0.2.0.exe**.
 2. Select the formats you want (VST3 and/or CLAP).
 3. Complete the wizard.
 4. Rescan your DAW (see table below).
@@ -169,7 +177,7 @@ All parameters are fully automatable and support DAW recall and preset saving.
 ```
 Input (stereo)
   |
-  +-> RMS Envelope Detector (10 ms window, stereo-linked: max of L+R)
+  +-> RMS Envelope Detector (5 ms, stereo-linked: max of L+R)
   |         |
   |         v
   |   Input level in dBFS
@@ -185,7 +193,7 @@ Input (stereo)
   +-> Apply compression gain
   |         |
   |         v
-  |   Auto makeup gain (scaled with SQUASH, applied after smoother)
+  |   Auto makeup gain (calibrated static, applied after smoother)
   |
   +-> Parallel MIX blend (dry x (1 - MIX) + wet x MIX)
   |
