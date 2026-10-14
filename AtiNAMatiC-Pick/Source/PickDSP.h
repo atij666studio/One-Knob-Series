@@ -43,6 +43,7 @@ namespace np
 
         void prepare (double sr, int blockSize, int numChannels)
         {
+            juce::ignoreUnused (blockSize);
             sampleRate = sr;
             channels   = juce::jmax (1, numChannels);
 
