@@ -22,6 +22,10 @@ namespace ng
     //
     // Single user-facing macro: gateAmt 0..1 (Open ↔ Tight) drives threshold,
     // hold and aggressiveness simultaneously.
+    // Detector levels below this are never real playing, so the adaptive
+    // floor may learn from them even while the gate is open.
+    constexpr float kLearnCeiling = 0.00316f;   // -50 dBFS
+
     class GateDSP
     {
     public:
@@ -143,10 +147,14 @@ namespace ng
                 // Combined detector: max(RMS, peak·0.6).
                 const float detector = juce::jmax (rmsLevel, peakState * 0.6f);
 
-                // Adaptive noise-floor tracking.
+                // Adaptive noise-floor tracking. Learns upward while the gate
+                // is closed OR from anything quieter than real playing
+                // (< -50 dBFS) -- otherwise noise that held the gate open
+                // from the start was never learned, so Adaptive never
+                // adapted in exactly the case it exists for.
                 if (detector < envFloor)
                     envFloor += (detector - envFloor) * noiseTrackDnAlpha;
-                else if (currentGain < 0.10f)
+                else if (currentGain < 0.10f || detector < kLearnCeiling)
                     envFloor += (detector - envFloor) * noiseTrackUpAlpha;
                 envFloor = juce::jmax (envFloor, 1.0e-7f);
 

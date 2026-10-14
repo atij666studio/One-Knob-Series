@@ -18,8 +18,12 @@ namespace nd
     //  - The two voices use independent random sources at slightly
     //    different rates so their pitch/time wander is uncorrelated → no
     //    static comb filtering when summed to mono.
+    //  - Each voice gets its own gentle tone (A a touch darker, B a touch
+    //    leaner in the lows) so they read as separate takes, not copies,
+    //    and the mono sum combs less.
     //  - Mono safety: the dry signal is always blended back through the
-    //    centre so the mix can't phase-cancel down to nothing.
+    //    centre so the mix can't phase-cancel down to nothing. At 0 % the
+    //    voices are faded out completely (true mono / bypass-like).
     //
     // Single user-facing macro: WIDTH 0..1 simultaneously controls the
     // base delay spread, the drift magnitude, and the L/R pan amount.
@@ -75,6 +79,14 @@ namespace nd
             widthSmoothed = 0.0f;
             mixSmoothed   = 1.0f;
             outSmoothed   = 1.0f;
+            for (auto& g : gSm) g = 0.0f;
+            firstBlock    = true;
+
+            // Per-voice tone: A one-pole LP ~6.5 kHz, B LP ~9 kHz + HP ~110 Hz.
+            lpA = (float) std::exp (-juce::MathConstants<double>::twoPi * 6500.0 / sr);
+            lpB = (float) std::exp (-juce::MathConstants<double>::twoPi * 9000.0 / sr);
+            hpB = (float) std::exp (-juce::MathConstants<double>::twoPi * 110.0  / sr);
+            zA = zB = hpBx = hpBy = 0.0f;
 
             rng.seed (0xA17ED00B);
         }
@@ -125,8 +137,10 @@ namespace nd
             const float panAmt = maxPan * wCurved;
 
             // Voice gain rises a touch with width (without pulling the dry
-            // image apart) so doubles "lean in" as you open up.
-            const float voiceGain = 0.55f + 0.20f * wCurved;
+            // image apart) so doubles "lean in" as you open up. Below ~15 %
+            // the voices fade out entirely, so 0 % is a clean mono signal
+            // instead of a centred, comb-filtered copy.
+            const float voiceGain = (0.55f + 0.20f * wCurved) * juce::jmin (1.0f, width / 0.15f);
 
             // Dry centre always present for mono safety.
             const float centreGain = 1.0f - 0.25f * wCurved;
@@ -145,8 +159,18 @@ namespace nd
             // panAmt = 0 → both voices centred; panAmt = 1 → A hard L, B hard R.
             const float thetaA = juce::MathConstants<float>::pi * 0.25f * (1.0f - panAmt);
             const float thetaB = juce::MathConstants<float>::pi * 0.25f * (1.0f + panAmt);
-            const float gAL = std::cos (thetaA), gAR = std::sin (thetaA);
-            const float gBL = std::cos (thetaB), gBR = std::sin (thetaB);
+            // Targets for the per-sample smoothed gains (a fast knob move used
+            // to step these once per block = zipper noise).
+            const float tgt[kNumGains] { std::cos (thetaA) * voiceGain, std::sin (thetaA) * voiceGain,
+                                         std::cos (thetaB) * voiceGain, std::sin (thetaB) * voiceGain,
+                                         centreGain };
+            if (firstBlock)
+            {
+                for (int k = 0; k < kNumGains; ++k) gSm[k] = tgt[k];
+                voiceA.currentDelay = baseDelayAsamp;     // no pitch glide from 0 ms on load
+                voiceB.currentDelay = baseDelayBsamp;
+                firstBlock = false;
+            }
 
             float runningSqL = 0.0f, runningSqR = 0.0f;
 
@@ -195,14 +219,21 @@ namespace nd
                 voiceA.currentDelay += (targA - voiceA.currentDelay) * driftSmoothCoeff;
                 voiceB.currentDelay += (targB - voiceB.currentDelay) * driftSmoothCoeff;
 
-                const float a = readFrac (voiceA, voiceA.currentDelay);
-                const float b = readFrac (voiceB, voiceB.currentDelay);
+                for (int k = 0; k < kNumGains; ++k)
+                    gSm[k] += (tgt[k] - gSm[k]) * widthSmoothCoeff;
+
+                // Read both voices and give each its own tone.
+                const float aRaw = readFrac (voiceA, voiceA.currentDelay);
+                const float bRaw = readFrac (voiceB, voiceB.currentDelay);
+                zA = aRaw + lpA * (zA - aRaw);
+                zB = bRaw + lpB * (zB - bRaw);
+                const float bHp = zB - hpBx + hpB * hpBy;
+                hpBx = zB; hpBy = bHp;
+                const float a = zA, b = bHp;
 
                 // Doubled image: dry centre + panned voices ---------------
-                const float doubledL = inL[i] * centreGain
-                                     + (a * gAL + b * gBL) * voiceGain;
-                const float doubledR = inR[i] * centreGain
-                                     + (a * gAR + b * gBR) * voiceGain;
+                const float doubledL = inL[i] * gSm[4] + a * gSm[0] + b * gSm[2];
+                const float doubledR = inR[i] * gSm[4] + a * gSm[1] + b * gSm[3];
 
                 // Wet/dry against the original signal.
                 const float yL = (inL[i] * (1.0f - mixSmoothed) + doubledL * mixSmoothed) * outSmoothed;
@@ -257,6 +288,14 @@ namespace nd
         float widthSmoothed { 0.0f };
         float mixSmoothed   { 1.0f };
         float outSmoothed   { 1.0f };
+
+        // Smoothed gains: A->L, A->R, B->L, B->R, centre.
+        static constexpr int kNumGains = 5;
+        float gSm[kNumGains] {};
+        bool  firstBlock { true };
+
+        float lpA { 0.0f }, lpB { 0.0f }, hpB { 0.0f };
+        float zA { 0.0f }, zB { 0.0f }, hpBx { 0.0f }, hpBy { 0.0f };
 
         std::mt19937 rng { 0xA17ED00B };
 

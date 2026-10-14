@@ -18,23 +18,34 @@ namespace nf
     //   compression amount + transient softening + auto make-up.
     //
     // Mode picker shapes the character:
-    //   Tight  : fast attack, short release, articulate. Minimal transient cut.
-    //   Even   : balanced — feedforward-style smooth comp.
-    //   Smooth : slow-ish attack + heavy transient softening, very forgiving.
+    //   Tight  : short release, articulate. Minimal transient cut.
+    //   Even   : balanced — smooth comp.
+    //   Smooth : long release + heavy transient softening, very forgiving.
+    //
+    // Attacks are near-instant on purpose: with zero lookahead, anything
+    // slower lets the first half-millisecond of every pick attack through
+    // at full make-up gain, so the spikes would come out *louder* than they
+    // went in. The detector holds its peak for ~15 ms, so a fast attack only
+    // shapes the leading edge and never rides the waveform.
     //
     // Per-sample chain (per channel):
     //   1. DC blocker (HPF @ 25 Hz)
     //   2. Transient softener — light envelope-difference based attack ducker
     //      that only attenuates the *peak* part of pick attacks. Bypassed
     //      when assist == 0.
-    //   3. Feedforward soft-knee compressor (log-domain envelope) with auto
+    //   3. Feedforward soft-knee compressor (peak-hold detector) with auto
     //      threshold and ratio driven by ASSIST. Smooth attack/release per
     //      mode.
-    //   4. Auto make-up (compensates static gain reduction at avg input).
+    //   4. Static auto make-up (gain reduction of a typical picked note).
     //   5. Output trim.
     //
     // No oversampling, no FFT, no lookahead — keeps latency at zero so it
     // feels native in front of a NAM amp model.
+    // Make-up calibration: reference note peak level and how much of its
+    // gain reduction to give back (tuned on DI guitar for a ~flat sweep).
+    constexpr float kMakeupRefDb  = -4.5f;
+    constexpr float kMakeupAmount = 1.0f;
+
     class FeelDSP
     {
     public:
@@ -71,6 +82,9 @@ namespace nf
             envIn = envOut = 0.0f;
             grEnv = 0.0f;
             smoothEnv = 0.0f;
+            pkHeld = 0.0f;
+            holdCount = 0;
+            trDuckDb = 0.0f;
 
             outGainSm.reset (sr, 0.02);
             outGainSm.setCurrentAndTargetValue (1.0f);
@@ -95,18 +109,18 @@ namespace nf
             switch ((Mode) mode)
             {
                 case Tight:
-                    compAttackMs = 3.5f;  compReleaseMs = 80.0f;
+                    compAttackMs = 0.02f; compReleaseMs = 90.0f;
                     ratioMax = 2.5f;      threshFloor = -28.0f;
                     transientAmt = 0.25f; kneeDb = 4.0f;
                     break;
                 case Smooth:
-                    compAttackMs = 18.0f; compReleaseMs = 220.0f;
+                    compAttackMs = 0.1f;  compReleaseMs = 220.0f;
                     ratioMax = 4.0f;      threshFloor = -38.0f;
                     transientAmt = 1.0f;  kneeDb = 9.0f;
                     break;
                 case Even:
                 default:
-                    compAttackMs = 8.0f;  compReleaseMs = 130.0f;
+                    compAttackMs = 0.05f; compReleaseMs = 130.0f;
                     ratioMax = 3.0f;      threshFloor = -32.0f;
                     transientAmt = 0.6f;  kneeDb = 6.0f;
                     break;
@@ -120,24 +134,32 @@ namespace nf
             const float invRatio    = 1.0f / ratio;
             const float halfKnee    = kneeDb * 0.5f;
 
-            // Per-sample envelope coefficients (log-domain envelope of |x|).
+            // Per-sample gain-reduction smoothing coefficients.
             const float aAtk = (float) (1.0 - std::exp (-1.0 / (compAttackMs  * 0.001 * sampleRate)));
             const float aRel = (float) (1.0 - std::exp (-1.0 / (compReleaseMs * 0.001 * sampleRate)));
 
-            // Transient detector (fast vs slow). Difference (fast - slow)
-            // marks pick attacks; we duck the *peak* portion proportional to
-            // assist * mode-scale.
+            // Transient detector: fast vs slow attack, SHARED release. On a
+            // sustained note both followers decay together between waveform
+            // peaks, so only a real pick attack opens a gap between them
+            // (the old symmetric 1.5 ms follower rippled at the note's own
+            // frequency and modulated the gain = audible distortion).
             const float aTrFast = (float) (1.0 - std::exp (-1.0 / (0.0015 * sampleRate)));   // 1.5 ms
-            const float aTrSlow = (float) (1.0 - std::exp (-1.0 / (0.030  * sampleRate)));   //  30 ms
+            const float aTrSlow = (float) (1.0 - std::exp (-1.0 / (0.020  * sampleRate)));   //  20 ms
+            const float aTrRel  = (float) (1.0 - std::exp (-1.0 / (0.120  * sampleRate)));   // 120 ms
             const float trGain  = assist * transientAmt;   // 0..~1
 
-            // Auto make-up: estimate static GR at threshold of -12 dBFS-ish
-            // signal and add half of it back. Keeps loudness perceptually
-            // similar across the sweep.
-            const float refDb       = -12.0f;
-            const float overRef     = juce::jmax (0.0f, refDb - threshDb);
-            const float staticGRdB  = overRef * (1.0f - invRatio);
-            const float makeupDb    = staticGRdB * 0.7f;
+            // Level detector: peak with ~15 ms hold, then 60 ms release. The
+            // hold bridges a full cycle of a low E, so the level the gain
+            // computer sees doesn't ripple with the waveform.
+            const int   holdLen = (int) (0.015 * sampleRate);
+            const float pkRel   = (float) std::exp (-1.0 / (0.060 * sampleRate));
+
+            // Static, pedal-style make-up: the gain reduction a typical
+            // picked note (peaks around REF dBFS) gets, given back. Static on
+            // purpose -- an adaptive make-up "remembers" hard playing and
+            // jumps the next soft note.
+            const float overRef    = juce::jmax (0.0f, kMakeupRefDb - threshDb);
+            const float makeupDb   = overRef * (1.0f - invRatio) * kMakeupAmount + trGain * 1.5f;
             outGainSm.setTargetValue (juce::Decibels::decibelsToGain (makeupDb + outGainDb));
 
             const int chClamp = juce::jmin (numCh, 8);
@@ -151,64 +173,53 @@ namespace nf
 
             for (int i = 0; i < n; ++i)
             {
-                // Use ch0 as the sidechain detector for stable stereo image.
-                const float xDet0 = dcBlock.processSample (0, writePtrs[0][i]);
-                writePtrs[0][i]   = xDet0;
-
-                const float ax    = std::abs (xDet0) + 1.0e-12f;
+                // DC-block every channel, then detect on the loudest one
+                // (linked: one gain for all channels keeps the image steady).
+                float ax = 1.0e-12f;
+                for (int c = 0; c < chClamp; ++c)
+                {
+                    const float xc = dcBlock.processSample (c, writePtrs[c][i]);
+                    writePtrs[c][i] = xc;
+                    ax = juce::jmax (ax, std::abs (xc));
+                }
 
                 // --- Transient softener ---------------------------------
-                envFast[0] += (ax - envFast[0]) * aTrFast;
-                envSlow[0] += (ax - envSlow[0]) * aTrSlow;
-                const float over = envFast[0] - envSlow[0];   // > 0 during attack
-                // Map "attack overshoot" relative to slow envelope to a
-                // 0..1 amount of softening.
-                const float relOver = juce::jmax (0.0f, over) / (envSlow[0] + 1.0e-6f);
+                envFast[0] += (ax - envFast[0]) * (ax > envFast[0] ? aTrFast : aTrRel);
+                envSlow[0] += (ax - envSlow[0]) * (ax > envSlow[0] ? aTrSlow : aTrRel);
+                const float relOver = juce::jmax (0.0f, envFast[0] - envSlow[0]) / (envSlow[0] + 1.0e-6f);
                 const float softT   = juce::jlimit (0.0f, 1.0f, relOver * 1.5f);
-                // Maximum attenuation during a pick spike: up to 4 dB at trGain=1.
-                const float trDuckDb = -softT * trGain * 4.0f;
-                const float trGainLin = juce::Decibels::decibelsToGain (trDuckDb);
+                // Up to ~5 dB off the pick spike at trGain = 1, smoothed so
+                // the ducking itself has no edges.
+                trDuckDb += (-softT * trGain * 5.0f - trDuckDb) * aTrFast;
 
-                // --- Compressor envelope (log-domain) -------------------
-                const float xDb = juce::Decibels::gainToDecibels (ax, -100.0f);
-                // Target gain reduction in dB given soft knee.
-                float over0 = xDb - threshDb;
+                // --- Compressor (log-domain, peak-hold detector) --------
+                if (ax >= pkHeld) { pkHeld = ax; holdCount = holdLen; }
+                else if (holdCount > 0) --holdCount;
+                else pkHeld = juce::jmax (ax, pkHeld * pkRel);
+
+                const float xDb = juce::Decibels::gainToDecibels (pkHeld, -100.0f);
+                const float over0 = xDb - threshDb;
                 float gr;   // negative dB
                 if (over0 < -halfKnee)            gr = 0.0f;
                 else if (over0 >  halfKnee)       gr = -(over0 * (1.0f - invRatio));
                 else
                 {
                     const float k = over0 + halfKnee;
-                    const float soft = (k * k) / (2.0f * kneeDb);
-                    gr = -(soft * (1.0f - invRatio));
+                    gr = -((k * k) / (2.0f * kneeDb) * (1.0f - invRatio));
                 }
 
                 // Smooth GR: attack when more reduction needed, release when less.
-                const float a = (gr < envComp[0]) ? aAtk : aRel;
-                envComp[0]   += (gr - envComp[0]) * a;
+                envComp[0] += (gr - envComp[0]) * ((gr < envComp[0]) ? aAtk : aRel);
 
-                const float compGainLin = juce::Decibels::decibelsToGain (envComp[0]);
-                const float outGainNow  = outGainSm.getNextValue();
+                const float g = juce::Decibels::decibelsToGain (envComp[0] + trDuckDb) * outGainSm.getNextValue();
 
-                // Apply per-channel (same envelope for stereo coherency).
                 for (int c = 0; c < chClamp; ++c)
-                {
-                    float x = (c == 0) ? xDet0 : dcBlock.processSample (c, writePtrs[c][i]);
-                    x *= trGainLin;
-                    x *= compGainLin;
-                    x *= outGainNow;
-                    writePtrs[c][i] = x;
+                    writePtrs[c][i] *= g;
 
-                    if (c == 0)
-                    {
-                        const float aIn  = ax;
-                        const float aOut = std::abs (x);
-                        if (aIn  > pkIn)  pkIn  = aIn;
-                        if (aOut > pkOut) pkOut = aOut;
-                        grAcc += -envComp[0];   // positive dB
-                        smAcc += softT;
-                    }
-                }
+                pkIn  = juce::jmax (pkIn, ax);
+                pkOut = juce::jmax (pkOut, std::abs (writePtrs[0][i]));
+                grAcc += -envComp[0];   // positive dB
+                smAcc += softT;
             }
 
             envIn  += (pkIn  - envIn)  * meterA;
@@ -236,6 +247,10 @@ namespace nf
         std::array<float, 8> envComp { {} };  // dB (negative = reduction)
 
         juce::SmoothedValue<float> outGainSm;
+
+        float pkHeld    { 0.0f };
+        int   holdCount { 0 };
+        float trDuckDb  { 0.0f };
 
         float envIn     { 0.0f };
         float envOut    { 0.0f };

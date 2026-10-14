@@ -17,13 +17,18 @@ namespace na
     //   - mode-dependent body / depth amount
     //
     // Modes shape the colour & depth, NOT the macro:
-    //   Studio : tight, controlled. Smaller widening, no low-mid peak.
-    //   Room   : bigger air, +small ~80 Hz speaker resonance peak,
-    //            +short side Haas delay for "depth" feel.
+    //   Studio : tight, controlled. Smaller widening, a few very short
+    //            reflections (2-12 ms), no low-mid peak.
+    //   Room   : bigger air, +small ~80 Hz speaker resonance peak, and a
+    //            longer early-reflection pattern (5-29 ms) for "standing in
+    //            front of the cab" depth.
     //
-    // All filtering done with TPT/IIR. Signal stays mono-sum-safe (M/S
-    // widening only scales the sides, never inverts polarity or delays
-    // mid).
+    // Depth on mono sources: a guitar out of a mono amp sim has no side
+    // signal at all, so plain M/S widening does nothing. Air builds its
+    // depth from a short early-reflection pattern of the MID signal that is
+    // written ONLY into the side channel (high-passed at 150 Hz so the lows
+    // stay centred, darkened above 6 kHz like a real room). L+R cancels it
+    // exactly, so the mono sum is untouched. No tail -- it is not a reverb.
     // ------------------------------------------------------------------
     class AirDSP
     {
@@ -56,11 +61,18 @@ namespace na
                 bodyF[c].reset();     bodyF[c].coefficients     = bodyCoefs;
             }
 
-            // Side Haas delay buffer (short, ~10 ms max). Used only in Room
-            // mode to add depth without smearing transients on mid.
-            const int maxDelay = (int) std::ceil (sr * 0.012);
-            sideDelay.assign ((size_t) juce::jmax (1, maxDelay) + 4, 0.0f);
-            sideWritePos = 0;
+            // Mid history for the early-reflection generator (~40 ms).
+            midHist.assign ((size_t) juce::nextPowerOfTwo ((int) std::ceil (sr * 0.040) + 4), 0.0f);
+            midMask = (int) midHist.size() - 1;
+            midPos  = 0;
+            for (int k = 0; k < kStudioTaps; ++k) studioDelay[k] = (int) std::round (sr * 0.001 * kStudioMs[k]);
+            for (int k = 0; k < kRoomTaps;   ++k) roomDelay[k]   = (int) std::round (sr * 0.001 * kRoomMs[k]);
+            erHpA = (float) std::exp (-juce::MathConstants<double>::twoPi * 150.0 / sr);
+            erLpA = (float) std::exp (-juce::MathConstants<double>::twoPi * 6000.0 / sr);
+            erHpX = erHpY = erLp = 0.0f;
+            gStudio = gRoom = 0.0f;
+            erSmA = (float) (1.0 - std::exp (-1.0 / (0.030 * sr)));
+            sideMs = midMs = 0.0f;
 
             envIn  = 0.0f;
             envOut = 0.0f;
@@ -97,11 +109,10 @@ namespace na
             // --- Macro mapping -------------------------------------------
             // Shelf / presence / body amounts are computed inside updateAir;
             // here we only need the values used directly by the per-sample
-            // mixer (widening + Haas).
-            const float sidesGain     = 1.0f + smAir * (m == Room ? 0.7f : 0.4f);
-            const int   sideDelaySmps = (m == Room)
-                ? (int) std::round (sampleRate * (0.0008 + 0.0035 * smAir)) // ~0.8..4.3 ms
-                : 0;
+            // mixer (widening + early reflections).
+            const float sidesGain = 1.0f + smAir * (m == Room ? 0.7f : 0.4f);
+            const float tgtStudio = (m == Studio ? smAir * 0.30f : 0.0f);
+            const float tgtRoom   = (m == Room   ? smAir * 0.45f : 0.0f);
 
             // Update shelves cheaply per block. Filters share coefficient
             // objects — write once, all per-channel filters see the change.
@@ -123,8 +134,6 @@ namespace na
             const float envA = (float) (1.0 - std::exp (-1.0 / (0.020 * sampleRate)));
             float pkIn = 0.0f, pkOut = 0.0f;
 
-            const int delayBufSize = (int) sideDelay.size();
-
             // Stereo path: M/S processing for widening + per-channel EQ.
             if (chClamp >= 2)
             {
@@ -141,20 +150,37 @@ namespace na
 
                     // Mid / Side (energy-preserving 1/sqrt(2) form).
                     const float Mid  = (Lf + Rf) * invSqrt2;
-                    float       Side = (Lf - Rf) * invSqrt2;
+                    float       Side = (Lf - Rf) * invSqrt2 * sidesGain;
 
-                    // Optional Haas-ish side delay for depth (Room).
-                    sideDelay[(size_t) sideWritePos] = Side;
-                    if (sideDelaySmps > 0)
+                    // Early reflections of the mid, into the side only.
+                    midHist[(size_t) midPos] = Mid;
+                    gStudio += (tgtStudio - gStudio) * erSmA;
+                    gRoom   += (tgtRoom   - gRoom)   * erSmA;
+                    float er = 0.0f;
+                    if (gStudio > 1.0e-5f)
                     {
-                        int rp = sideWritePos - sideDelaySmps;
-                        if (rp < 0) rp += delayBufSize;
-                        Side = sideDelay[(size_t) rp];
+                        float acc = 0.0f;
+                        for (int k = 0; k < kStudioTaps; ++k)
+                            acc += kStudioGain[k] * midHist[(size_t) ((midPos - studioDelay[k]) & midMask)];
+                        er += acc * gStudio;
                     }
-                    if (++sideWritePos >= delayBufSize) sideWritePos = 0;
+                    if (gRoom > 1.0e-5f)
+                    {
+                        float acc = 0.0f;
+                        for (int k = 0; k < kRoomTaps; ++k)
+                            acc += kRoomGain[k] * midHist[(size_t) ((midPos - roomDelay[k]) & midMask)];
+                        er += acc * gRoom;
+                    }
+                    midPos = (midPos + 1) & midMask;
 
-                    // Widen.
-                    Side *= sidesGain;
+                    // Keep the lows centred, darken the top like a real room.
+                    const float hp = er - erHpX + erHpA * erHpY;
+                    erHpX = er; erHpY = hp;
+                    erLp = hp + erLpA * (erLp - hp);
+                    Side += erLp;
+
+                    sideMs += (Side * Side - sideMs) * envA;
+                    midMs  += (Mid  * Mid  - midMs)  * envA;
 
                     const float wetL = (Mid + Side) * invSqrt2;
                     const float wetR = (Mid - Side) * invSqrt2;
@@ -195,13 +221,21 @@ namespace na
             envIn  += (pkIn  - envIn)  * envA;
             envOut += (pkOut - envOut) * envA;
 
-            // air activity = knob position scaled by input signal level.
-            // Works correctly for mono sources (guitar -> NAM -> here):
-            // DRY when knob=0 or no signal, LIFT/OPEN/WIDE as air and level rise.
-            const float inDb      = juce::Decibels::gainToDecibels (envIn, -90.0f);
-            const float inNorm    = juce::jlimit (0.0f, 1.0f, (inDb + 60.0f) / 60.0f);
-            const float airTarget = air * inNorm;
-            airE += (airTarget - airE) * envA;
+            // Air activity = how much side/depth the output actually carries
+            // (side-to-mid energy, -30 dB -> 0, -6 dB -> 1), or the knob
+            // position for mono layouts where there is no side.
+            float airTarget;
+            if (chClamp >= 2 && midMs > 1.0e-9f)
+            {
+                const float sideToMidDb = 10.0f * std::log10 (juce::jmax (sideMs, 1.0e-12f) / midMs);
+                airTarget = juce::jlimit (0.0f, 1.0f, (sideToMidDb + 30.0f) / 24.0f);
+            }
+            else
+            {
+                const float inDb = juce::Decibels::gainToDecibels (envIn, -90.0f);
+                airTarget = air * juce::jlimit (0.0f, 1.0f, (inDb + 60.0f) / 60.0f);
+            }
+            airE += (airTarget - airE) * juce::jmin (1.0f, envA * (float) n);
 
             inputDb.store   (juce::Decibels::gainToDecibels (envIn,  -90.0f), std::memory_order_relaxed);
             outputDb.store  (juce::Decibels::gainToDecibels (envOut, -90.0f), std::memory_order_relaxed);
@@ -221,17 +255,17 @@ namespace na
             const float presenceDb = air * 2.0f;
             const float bodyDb     = (m == Room ? air * 2.5f : 0.0f);
 
-            *airCoefs      = *juce::dsp::IIR::Coefficients<float>::makeHighShelf (
+            *airCoefs      = juce::dsp::IIR::ArrayCoefficients<float>::makeHighShelf (
                                 sampleRate, 10000.0f, 0.5f,
                                 juce::Decibels::decibelsToGain (airShelfDb));
 
-            *presenceCoefs = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (
+            *presenceCoefs = juce::dsp::IIR::ArrayCoefficients<float>::makePeakFilter (
                                 sampleRate, 5000.0f, 0.8f,
                                 juce::Decibels::decibelsToGain (presenceDb));
 
             // Room mode adds a gentle ~80 Hz speaker-cab resonance peak.
             // Studio mode = unity (no body peak).
-            *bodyCoefs     = *juce::dsp::IIR::Coefficients<float>::makePeakFilter (
+            *bodyCoefs     = juce::dsp::IIR::ArrayCoefficients<float>::makePeakFilter (
                                 sampleRate, 80.0f, 1.2f,
                                 juce::Decibels::decibelsToGain (bodyDb));
         }
@@ -243,8 +277,21 @@ namespace na
             airCoefs, presenceCoefs, bodyCoefs;
         std::array<juce::dsp::IIR::Filter<float>, 8> airF, presenceF, bodyF;
 
-        std::vector<float> sideDelay;
-        int   sideWritePos { 0 };
+        // Early-reflection patterns (ms, gain incl. polarity). Alternating
+        // polarity keeps the pattern from colouring the side like a comb.
+        static constexpr int   kStudioTaps = 4;
+        static constexpr float kStudioMs[kStudioTaps]   { 2.1f, 4.7f, 7.3f, 11.9f };
+        static constexpr float kStudioGain[kStudioTaps] { 0.55f, -0.42f, 0.33f, -0.22f };
+        static constexpr int   kRoomTaps = 6;
+        static constexpr float kRoomMs[kRoomTaps]       { 5.3f, 9.1f, 13.7f, 17.9f, 23.3f, 29.0f };
+        static constexpr float kRoomGain[kRoomTaps]     { 0.60f, -0.48f, 0.40f, -0.30f, 0.22f, -0.15f };
+
+        std::vector<float> midHist;
+        int   midMask { 0 }, midPos { 0 };
+        int   studioDelay[kStudioTaps] {}, roomDelay[kRoomTaps] {};
+        float erHpA { 0.0f }, erLpA { 0.0f }, erHpX { 0.0f }, erHpY { 0.0f }, erLp { 0.0f };
+        float gStudio { 0.0f }, gRoom { 0.0f }, erSmA { 0.0f };
+        float sideMs { 0.0f }, midMs { 0.0f };
 
         int   currentMode  { -1 };
         float lastAir      { -1.0f };
