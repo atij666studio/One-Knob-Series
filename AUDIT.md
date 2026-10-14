@@ -41,6 +41,10 @@ session; **Med** = clearly audible flaw; **Low** = polish.
 | All | Low | Five plug-ins reported themselves to hosts as "NAM Boost/Dirt/Gate/Level/Pick"; Squash/Tight/HitZone showed "0.5000"; Output had no unit. | `AtiNAMatiC-<Name>` everywhere; "72 %", "+1.5 dB" via `Shared/OneKnobParams.h`. |
 | Build | Low | `clap-juce-extensions` fetched from moving `main` → builds could break without any change here. | Pinned to commit `7adee3a`. |
 
+**pluginval** (Tracktion, strictness 8, all 11 VST3 builds): 11/11 pass.
+**Release builds** (Windows, VST3 + CLAP + Standalone): 11/11 build; v0.2.0
+installers built with Inno Setup.
+
 Things that were checked and are fine: state save/restore (all parameters,
 including garbage input), NaN/Inf at every sample rate / block size, silence
 stays silent, denormals (CPU flat on decaying tails), Gate's lookahead and
@@ -64,8 +68,8 @@ Shared kit in `Shared/OneKnobUI.h`, used by all 11 editors (each editor is now
 
 ## Not done / recommendations
 
-- **PDF manuals** were not regenerated — the `.md` manuals are updated
-  (each has a "What's new in v0.2.0" section); re-export the PDFs.
+- **PDF manuals** were regenerated from the updated `.md` files (pandoc + Edge).
+
 - **Listening test.** Everything above is measured, not auditioned. Please
   A/B especially Boost, Dirt, Air (Room) and Squash (Smash) on your own rig.
 - **Latency:** Boost and Dirt now report 38 samples (≈0.8 ms @ 48 kHz) for
