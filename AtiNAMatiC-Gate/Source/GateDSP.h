@@ -58,7 +58,7 @@ namespace ng
 
             rmsAlpha          = oneMinusExp (0.005);
             peakReleaseAlpha  = oneMinusExp (0.040);
-            noiseTrackUpAlpha = oneMinusExp (3.000);
+            noiseTrackUpAlpha = oneMinusExp (1.000);
             noiseTrackDnAlpha = oneMinusExp (0.300);
 
             scHPF.reset();
