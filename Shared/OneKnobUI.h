@@ -663,7 +663,7 @@ namespace okui
     {
         juce::String product;          // "Boost"
         juce::String tagline;          // "Life, punch & clarity"
-        int          index { 1 };      // catalogue number 1..11
+        int          index { 1 };      // series number (01-11 follow the signal chain; later ones in release order)
         juce::Colour accent;
 
         juce::String macroId, macroLegend;
@@ -793,7 +793,7 @@ namespace okui
 
         static juce::String catalogue (int i)
         {
-            return juce::String (i).paddedLeft ('0', 2) + " / 11";
+            return "No. " + juce::String (i).paddedLeft ('0', 2);
         }
 
         void attach (juce::Slider& s, const juce::String& id)
