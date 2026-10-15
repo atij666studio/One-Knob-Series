@@ -29,7 +29,9 @@ jobs:
             'AtiNAMatiC-Air','AtiNAMatiC-Boost','AtiNAMatiC-Dirt',
             'AtiNAMatiC-Double','AtiNAMatiC-Feel','AtiNAMatiC-Gate',
             'AtiNAMatiC-HitZone','AtiNAMatiC-Level','AtiNAMatiC-Pick',
-            'AtiNAMatiC-Squash','AtiNAMatiC-Tight'
+            'AtiNAMatiC-Squash','AtiNAMatiC-Tight',
+            'AtiNAMatiC-Sag','AtiNAMatiC-Strum','AtiNAMatiC-Cohere',
+            'AtiNAMatiC-Reach','AtiNAMatiC-Room'
           )
           foreach ($p in $plugins) {
             cmake -S $p -B "$p/build" -G Ninja -DCMAKE_BUILD_TYPE=Release
@@ -41,7 +43,7 @@ jobs:
         run: |
           $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
           if (-not (Test-Path $iscc)) { $iscc = "${env:ProgramFiles}\Inno Setup 6\ISCC.exe" }
-          foreach ($n in @('Air','Boost','Dirt','Double','Feel','Gate','HitZone','Level','Pick','Squash','Tight')) {
+          foreach ($n in @('Air','Boost','Dirt','Double','Feel','Gate','HitZone','Level','Pick','Squash','Tight','Sag','Strum','Cohere','Reach','Room')) {
             & $iscc "AtiNAMatiC-$n\Installer\AtiNAMatiC-$n.iss"
             if ($LASTEXITCODE -ne 0) { Write-Warning "ISCC failed for $n (exit $LASTEXITCODE)" }
           }
@@ -56,7 +58,10 @@ jobs:
             @{N='Feel';T='AtiNAMatiCFeel'}, @{N='Gate';T='AtiNAMatiCGate'},
             @{N='HitZone';T='AtiNAMatiCHitZone'}, @{N='Level';T='AtiNAMatiCLevel'},
             @{N='Pick';T='AtiNAMatiCPick'}, @{N='Squash';T='AtiNAMatiCSquash'},
-            @{N='Tight';T='AtiNAMatiCTight'}
+            @{N='Tight';T='AtiNAMatiCTight'},
+            @{N='Sag';T='AtiNAMatiCSag'}, @{N='Strum';T='AtiNAMatiCStrum'},
+            @{N='Cohere';T='AtiNAMatiCCohere'}, @{N='Reach';T='AtiNAMatiCReach'},
+            @{N='Room';T='AtiNAMatiCRoom'}
           )
           foreach ($e in $map) {
             $arts = "AtiNAMatiC-$($e.N)\build\$($e.T)_artefacts\Release"
@@ -92,7 +97,8 @@ jobs:
         run: |
           for p in AtiNAMatiC-Air AtiNAMatiC-Boost AtiNAMatiC-Dirt AtiNAMatiC-Double \
                    AtiNAMatiC-Feel AtiNAMatiC-Gate AtiNAMatiC-HitZone AtiNAMatiC-Level \
-                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight; do
+                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight \
+                   AtiNAMatiC-Sag AtiNAMatiC-Strum AtiNAMatiC-Cohere AtiNAMatiC-Reach AtiNAMatiC-Room; do
             cmake -S "$p" -B "$p/build" -G Ninja -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_OSX_ARCHITECTURES="arm64;x86_64" \
               -DCMAKE_OSX_DEPLOYMENT_TARGET=10.15
@@ -102,7 +108,7 @@ jobs:
       - name: Collect and zip
         run: |
           mkdir -p dist/VST3 dist/CLAP dist/AU
-          for n in Air Boost Dirt Double Feel Gate HitZone Level Pick Squash Tight; do
+          for n in Air Boost Dirt Double Feel Gate HitZone Level Pick Squash Tight Sag Strum Cohere Reach Room; do
             a="AtiNAMatiC-$n/build/AtiNAMatiC${n}_artefacts/Release"
             [ -d "$a/VST3/AtiNAMatiC-$n.vst3" ]    && cp -r "$a/VST3/AtiNAMatiC-$n.vst3"    dist/VST3/
             [ -f "$a/CLAP/AtiNAMatiC-$n.clap" ]    && cp    "$a/CLAP/AtiNAMatiC-$n.clap"    dist/CLAP/
@@ -136,7 +142,8 @@ jobs:
         run: |
           for p in AtiNAMatiC-Air AtiNAMatiC-Boost AtiNAMatiC-Dirt AtiNAMatiC-Double \
                    AtiNAMatiC-Feel AtiNAMatiC-Gate AtiNAMatiC-HitZone AtiNAMatiC-Level \
-                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight; do
+                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight \
+                   AtiNAMatiC-Sag AtiNAMatiC-Strum AtiNAMatiC-Cohere AtiNAMatiC-Reach AtiNAMatiC-Room; do
             cmake -S "$p" -B "$p/build" -G Ninja -DCMAKE_BUILD_TYPE=Release
             cmake --build "$p/build" --parallel $(nproc)
           done
@@ -146,7 +153,8 @@ jobs:
           mkdir -p dist/VST3 dist/CLAP dist/LV2
           for p in AtiNAMatiC-Air AtiNAMatiC-Boost AtiNAMatiC-Dirt AtiNAMatiC-Double \
                    AtiNAMatiC-Feel AtiNAMatiC-Gate AtiNAMatiC-HitZone AtiNAMatiC-Level \
-                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight; do
+                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight \
+                   AtiNAMatiC-Sag AtiNAMatiC-Strum AtiNAMatiC-Cohere AtiNAMatiC-Reach AtiNAMatiC-Room; do
             find "$p/build" -maxdepth 6 -type d -name "*.vst3" | while read b; do cp -r "$b" dist/VST3/; done
             find "$p/build" -maxdepth 5 -name "*.clap"         | while read b; do cp    "$b" dist/CLAP/; done
             find "$p/build" -maxdepth 6 -type d -name "*.lv2"  | while read b; do cp -r "$b" dist/LV2/;  done
@@ -194,7 +202,8 @@ jobs:
         run: |
           for p in AtiNAMatiC-Air AtiNAMatiC-Boost AtiNAMatiC-Dirt AtiNAMatiC-Double \
                    AtiNAMatiC-Feel AtiNAMatiC-Gate AtiNAMatiC-HitZone AtiNAMatiC-Level \
-                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight; do
+                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight \
+                   AtiNAMatiC-Sag AtiNAMatiC-Strum AtiNAMatiC-Cohere AtiNAMatiC-Reach AtiNAMatiC-Room; do
             cmake -S "$p" -B "$p/build" -G Ninja -DCMAKE_BUILD_TYPE=Release \
               -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12
             cmake --build "$p/build" --parallel $(nproc)
@@ -205,7 +214,8 @@ jobs:
           mkdir -p dist/VST3 dist/CLAP dist/LV2
           for p in AtiNAMatiC-Air AtiNAMatiC-Boost AtiNAMatiC-Dirt AtiNAMatiC-Double \
                    AtiNAMatiC-Feel AtiNAMatiC-Gate AtiNAMatiC-HitZone AtiNAMatiC-Level \
-                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight; do
+                   AtiNAMatiC-Pick AtiNAMatiC-Squash AtiNAMatiC-Tight \
+                   AtiNAMatiC-Sag AtiNAMatiC-Strum AtiNAMatiC-Cohere AtiNAMatiC-Reach AtiNAMatiC-Room; do
             find "$p/build" -maxdepth 6 -type d -name "*.vst3" | while read b; do cp -r "$b" dist/VST3/; done
             find "$p/build" -maxdepth 5 -name "*.clap"         | while read b; do cp    "$b" dist/CLAP/; done
             find "$p/build" -maxdepth 6 -type d -name "*.lv2"  | while read b; do cp -r "$b" dist/LV2/;  done

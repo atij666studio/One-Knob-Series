@@ -1,6 +1,6 @@
 # ONE KNOB Series
 
-11 free, open-source audio plug-ins for guitar amp-sim rigs (NAM · ToneX · Neural DSP · Kemper etc.).  
+16 free, open-source audio plug-ins for guitar amp-sim rigs (NAM · ToneX · Neural DSP · Kemper etc.).  
 Each plug-in does one thing exceptionally well, controlled by a single knob.
 
 **Formats:** VST3 · CLAP · AU (macOS) · LV2 (Linux)  
@@ -23,9 +23,16 @@ Each plug-in does one thing exceptionally well, controlled by a single knob.
 | **AtiNAMatiC-Pick** | Pick-attack shaper — dials in the transient character from soft to percussive |
 | **AtiNAMatiC-Squash** | Bus and mix compressor — glue and punch for the final mix |
 | **AtiNAMatiC-Tight** | Low-end tightener — controls flub and mud in downtuned or high-gain rigs |
+| **AtiNAMatiC-Sag** | Power-supply sag — notes droop under hard picking and bloom back, like a tube rectifier |
+| **AtiNAMatiC-Strum** | Three-band strum shaper — string clarity without the boom of a strum |
+| **AtiNAMatiC-Cohere** | Dynamic harshness tamer + glue — catches amp-sim fizz only when it sticks out |
+| **AtiNAMatiC-Reach** | Projection + mono-safe stereo spread — steps forward, spreads wide, mono lows |
+| **AtiNAMatiC-Room** | Ducking room ambience — dips while you play, blooms in the gaps |
 
-**Recommended chain order** (also the catalogue number shown in each plug-in):
-`01 Gate → 02 Tight → 03 Pick → 04 Feel → 05 HitZone → 06 Boost → 07 Dirt → [amp sim] → 08 Air → 09 Double → 10 Squash → 11 Level`
+**Recommended chain order:**
+`Gate → Tight → Pick → Strum → Feel → Sag → HitZone → Boost → Dirt → [amp sim] → Cohere → Air → Reach → Double → Room → Squash → Level`
+
+Series numbers: 01–11 follow the original chain (01 Gate … 11 Level); 12 Sag, 13 Strum, 14 Cohere, 15 Reach, 16 Room.
 
 See [AUDIT.md](AUDIT.md) for the v0.2.0 audit: measured issues, fixes and remaining recommendations.
 
