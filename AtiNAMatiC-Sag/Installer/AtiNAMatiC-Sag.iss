@@ -16,7 +16,7 @@
 #define Arts             ProjectRoot + "\build\AtiNAMatiCSag_artefacts\Release"
 
 [Setup]
-AppId={{B6F2C4D8-8A1E-4F1D-9B3A-A7C7E0E4A111}
+AppId={{E62DB625-125D-5CEC-A4D7-4CAEB48006D7}
 AppName={#MyAppName}
 AppVersion={#MyAppVersion}
 AppVerName={#MyAppName} {#MyAppVersion}
