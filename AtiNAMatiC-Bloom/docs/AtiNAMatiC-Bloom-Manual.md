@@ -14,7 +14,7 @@ A loud amp **blooms**: hold a note or a chord and it seems to grow, fuller and r
 - A new attack resets the bloom instantly, so the next pick is never boosted. Signals below about -50 dBFS are left alone, so decays into noise are never lifted.
 - Zero latency.
 
-Measured on held notes: the attack is unchanged, the sustain comes up by about +3 dB (50 %) to +6 dB (100 %), and peaks stay where they were.
+Measured on held notes: the attack is essentially unchanged, the sustain comes up by about +4 dB (50 %) to +8.6 dB (100 %), and peaks stay where they were.
 
 ## 2. Signal chain placement
 

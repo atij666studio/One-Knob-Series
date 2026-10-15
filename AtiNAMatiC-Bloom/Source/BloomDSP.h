@@ -43,7 +43,9 @@ namespace nbl
         {
             sampleRate = sr;
             channels   = juce::jlimit (1, 8, numChannels);
-            fast = slow = attackPk = 0.0f; age = 1.0e9f; holdLeft = 0;
+            held = 0.0f; heldLeft = 0; heldLen = (int) (0.015 * sr);
+            heldRel = (float) std::exp (-1.0 / (0.040 * sr));
+            fast = slow = attackPk = 0.0f; age = 1.0e9f; holdLeft = 0; armed = true;
             gDb = 0.0f;
             aFast = coef (0.001); aSlow = coef (0.030); aRel = coef (0.060);
             aDown = coef (0.020);
@@ -82,12 +84,22 @@ namespace nbl
                 for (int c = 0; c < numCh; ++c) det = juce::jmax (det, std::abs (p[c][i]));
 
                 // --- onset detection (shared release => sustain stays quiet)
-                fast += (det - fast) * (det > fast ? aFast : aRel);
-                slow += (det - slow) * (det > slow ? aSlow : aRel);
-                const bool onset = holdLeft <= 0 && fast > 0.003f && fast > slow * 1.7f;
+                // Peak-hold the level first (~15 ms, a full low-E cycle) so the
+                // envelopes below see a smooth level, not the waveform: during
+                // sustain they converge and the detector re-arms cleanly.
+                if (det >= held) { held = det; heldLeft = heldLen; }
+                else if (heldLeft > 0) --heldLeft;
+                else held = juce::jmax (det, held * heldRel);
+
+                fast += (held - fast) * (held > fast ? aFast : aRel);
+                slow += (held - slow) * (held > slow ? aSlow : aRel);
+                // Rising edge only (re-armed once the attack settles), so one
+                // pick can never retrigger the bloom.
+                if (fast < slow * 1.3f) armed = true;
+                const bool onset = armed && holdLeft <= 0 && fast > 0.003f && fast > slow * 1.7f;
                 if (onset)
                 {
-                    age = 0.0f; attackPk = fast; holdLeft = (int) (0.05 * sampleRate);
+                    age = 0.0f; attackPk = fast; holdLeft = (int) (0.05 * sampleRate); armed = false;
                 }
                 if (holdLeft > 0) { --holdLeft; attackPk = juce::jmax (attackPk, fast); }
                 age += 1.0f;
@@ -150,8 +162,11 @@ namespace nbl
 
         double sampleRate { 48000.0 };
         int    channels   { 2 };
+        float  held { 0 }, heldRel { 0.999f };
+        int    heldLeft { 0 }, heldLen { 0 };
         float  fast { 0 }, slow { 0 }, attackPk { 0 }, age { 1.0e9f }, gDb { 0 };
         int    holdLeft { 0 };
+        bool   armed { true };
         float  aFast { 0 }, aSlow { 0 }, aRel { 0 }, aDown { 0 }, aDrop { 0 };
         float  resoAmt { -1.0f };
         std::array<juce::dsp::IIR::Filter<float>, 8> reso;
