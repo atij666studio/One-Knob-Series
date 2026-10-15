@@ -1,6 +1,6 @@
 # ONE KNOB Series
 
-16 free, open-source audio plug-ins for guitar amp-sim rigs (NAM · ToneX · Neural DSP · Kemper etc.).  
+23 free, open-source audio plug-ins for guitar amp-sim rigs (NAM · ToneX · Neural DSP · Kemper etc.).  
 Each plug-in does one thing exceptionally well, controlled by a single knob.
 
 **Formats:** VST3 · CLAP · AU (macOS) · LV2 (Linux)  
@@ -28,11 +28,18 @@ Each plug-in does one thing exceptionally well, controlled by a single knob.
 | **AtiNAMatiC-Cohere** | Dynamic harshness tamer + glue — catches amp-sim fizz only when it sticks out |
 | **AtiNAMatiC-Reach** | Projection + mono-safe stereo spread — steps forward, spreads wide, mono lows |
 | **AtiNAMatiC-Room** | Ducking room ambience — dips while you play, blooms in the gaps |
+| **AtiNAMatiC-Bloom** | Sustain bloom — held notes swell and sing toward their attack level |
+| **AtiNAMatiC-Cab** | One-knob speaker cabinet — mic position from cap to edge, 1x12 / 2x12 / 4x12 |
+| **AtiNAMatiC-Choke** | Decay shortener — tighter stops for staccato and djent riffs |
+| **AtiNAMatiC-Mono** | Stereo-to-mono tool — mono bass, narrow or collapse the image, phase check |
+| **AtiNAMatiC-Hum** | Mains hum and buzz remover — very narrow notches, auto 50/60 Hz |
+| **AtiNAMatiC-Pitch** | Drop tuning, stereo detune and octave-down in one knob |
+| **AtiNAMatiC-Slow** | Auto volume swell — every note fades in, slow-gear style |
 
 **Recommended chain order:**
-`Gate → Tight → Pick → Strum → Feel → Sag → HitZone → Boost → Dirt → [amp sim] → Cohere → Air → Reach → Double → Room → Squash → Level`
+`Hum → Gate → Tight → Pick → Strum → Feel → Sag → Bloom → Slow → HitZone → Pitch → Boost → Dirt → [amp sim] → Cab → Choke → Cohere → Air → Reach → Double → Room → Mono → Squash → Level`
 
-Series numbers: 01–11 follow the original chain (01 Gate … 11 Level); 12 Sag, 13 Strum, 14 Cohere, 15 Reach, 16 Room.
+Series numbers: 01–11 follow the original chain (01 Gate … 11 Level); 12 Sag, 13 Strum, 14 Cohere, 15 Reach, 16 Room, 17 Bloom, 18 Cab, 19 Choke, 20 Mono, 21 Hum, 22 Pitch, 23 Slow.
 
 See [AUDIT.md](AUDIT.md) for the v0.2.0 audit: measured issues, fixes and remaining recommendations.
 

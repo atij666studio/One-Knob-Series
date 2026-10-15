@@ -98,5 +98,24 @@ same way as the original 11.
 | 16 | Room | 8-line FDN room reverb with ducking (Booth / Studio / Hall) | RT60 0.32 / 0.61 / 1.46 s, L/R decorrelated, duck -8 dB under playing |
 
 All five: harness stress suite pass, pluginval strictness 8 pass, Release
-VST3 + CLAP + Standalone build, installers, manuals (md + pdf). Tier 2 and
-Tier 3 folders are empty placeholders and were not started.
+VST3 + CLAP + Standalone build, installers, manuals (md + pdf). 
+
+## New plug-ins (Tier 2 and Tier 3)
+
+These folders were empty (names only), so each plug-in was designed from its
+name to fill a gap in the series, then built and verified the same way.
+
+| No. | Plug-in | What it does | Verified |
+|---|---|---|---|
+| 17 | Bloom | Held notes swell back toward their attack level (Swell / Sustain / Singing) | held notes: sustain +4.3 / +8.6 dB at 50 / 100 %, attack and peaks unchanged |
+| 18 | Cab | Filter-based speaker cabinet, MIC cap -> edge, 1x12 / 2x12 / 4x12 | fizz >7 kHz -11 dB (cap) to -29 dB (edge), level within ±1.5 dB |
+| 19 | Choke | Note-relative decay shortener (Tight / Staccato / Djent) | late tail -17 / -37 / -40 dB at 100 %, attacks unchanged, THD -127 dB |
+| 20 | Mono | Mono bass crossover, full narrowing, loudness-safe mono, phase check | side lows -13 / -25 dB, upper image untouched; Safe within 0.1 dB |
+| 21 | Hum | Constant-bandwidth notches at mains harmonics, auto 50/60 Hz | hum -15 / -22 / -31..-38 dB; clean guitar -0.2..-0.3 dB |
+| 22 | Pitch | Pitch-synchronous granular shifter: Drop / Detune / Octave | single notes: by-products 35-41 dB down; 0 st exact pass-through |
+| 23 | Slow | Auto volume swell, 50 ms - 2 s (Swell / Pad / Reverse) | identical swell on every note (one pick = one swell) |
+
+Found while building these and fixed: a constant-Q notch design that ate
+1.3 dB of clean guitar (Hum), grain phase cancellation that turned the octave
+into sidebands (Pitch), and an onset detector that could double-trigger and
+then stop re-arming on low notes (Slow, Bloom).
