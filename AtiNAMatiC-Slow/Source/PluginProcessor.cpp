@@ -45,7 +45,7 @@ void AtiNAMatiCSlowProcessor::prepareToPlay (double sampleRate, int samplesPerBl
 {
     const int ch = juce::jmax (getTotalNumInputChannels(), getTotalNumOutputChannels());
     dsp.prepare (sampleRate, samplesPerBlock, juce::jmax (1, ch));
-    setLatencySamples (0);
+    setLatencySamples (dsp.getLookaheadSamples());
 }
 
 bool AtiNAMatiCSlowProcessor::isBusesLayoutSupported (const BusesLayout& layouts) const

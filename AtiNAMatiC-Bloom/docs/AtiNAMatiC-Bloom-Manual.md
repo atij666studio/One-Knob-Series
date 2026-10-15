@@ -11,8 +11,8 @@ A loud amp **blooms**: hold a note or a chord and it seems to grow, fuller and r
 - On every pick attack Bloom remembers how loud the note started.
 - While the note sustains, it gradually brings the decaying sustain back up toward that starting level — never above it — over the bloom time.
 - As the note blooms, a little harmonic richness is blended in; in **Singing** mode an upper-mid resonance grows too, like an amp just before it feeds back.
-- A new attack resets the bloom instantly, so the next pick is never boosted. Signals below about -50 dBFS are left alone, so decays into noise are never lifted.
-- Zero latency.
+- A new attack resets the bloom instantly, so the next pick is never boosted. Picks over a chord that is still ringing are caught too (the detector also watches the pick click above 4 kHz). Signals below about -50 dBFS are left alone, so decays into noise are never lifted.
+- 6 ms latency, reported to your DAW. Bloom uses it to look ahead, so the bloom is already reset when the next pick arrives.
 
 Measured on held notes: the attack is essentially unchanged, the sustain comes up by about +4 dB (50 %) to +8.6 dB (100 %), and peaks stay where they were.
 
@@ -48,7 +48,7 @@ Blend with the dry signal and final trim.
 
 ## 5. Latency and CPU
 
-Zero latency. Very light on CPU.
+6 ms latency (look-ahead for the attack reset), reported to your DAW for automatic compensation. Very light on CPU.
 
 ## 6. Installation
 

@@ -8,10 +8,10 @@
 
 Violin-style volume swells without touching a volume knob or pedal. AtiNAMatiC-Slow hides the pick attack of every note and fades the note in, like a classic "slow gear" pedal.
 
-- Every new pick is detected automatically (the detector re-arms only once the previous attack has settled, so a note never triggers twice).
-- At each new attack the level dips to silence in 3 ms (the last note's tail fades instead of clicking), then the new note swells in over the swell time.
+- Every new pick is detected automatically, including picks over strings that are still ringing: besides the overall level, the detector watches the pick click above 4 kHz. It re-arms only once the previous attack has settled, so a note never triggers twice.
+- At each new attack the level dips to silence in 4 ms (the last note's tail fades instead of clicking), then the new note swells in over the swell time.
 - Noise below about -50 dBFS never triggers a swell.
-- Zero latency.
+- 6 ms latency, reported to your DAW (which compensates). Slow uses it to look ahead: the volume is already closed when the pick arrives, so none of the pick click gets through. The delay is inaudible because the attack is hidden anyway.
 
 Measured on picked notes at the default 263 ms swell: 13 % level at 60 ms, 60 % at 150 ms, full level by 270 ms, the same on every note.
 
@@ -56,6 +56,7 @@ Windows: run **AtiNAMatiC-Slow-Setup-0.2.0.exe**, then rescan plug-ins. Manual i
 
 - Swell at 300–600 ms with **Room** (Hall) after the amp is an instant ambient guitar.
 - Play legato for continuous pads; a new pick restarts the swell.
+- For faster playing, shorten the swell time. A note picked again before its swell finishes is faded out while it is still rising.
 - Double-click any knob to reset it; hold Shift while dragging for fine control.
 
 ---

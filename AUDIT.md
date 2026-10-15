@@ -73,7 +73,8 @@ Shared kit in `Shared/OneKnobUI.h`, used by all 11 editors (each editor is now
 - **Listening test.** Everything above is measured, not auditioned. Please
   A/B especially Boost, Dirt, Air (Room) and Squash (Smash) on your own rig.
 - **Latency:** Boost and Dirt now report 38 samples (≈0.8 ms @ 48 kHz) for
-  oversampling. Gate still reports 3 ms lookahead. Everything else is 0.
+  oversampling. Gate reports 3 ms lookahead; Slow and Bloom 6 ms. Everything
+  else is 0.
 - **Squash Smash** still lets the first attack after silence overshoot by up
   to ~+7 dB at high settings (normal for a fast compressor with make-up; it was
   ~+10 dB). A soft output ceiling could be added if you want it bullet-proof.
@@ -113,9 +114,19 @@ name to fill a gap in the series, then built and verified the same way.
 | 20 | Mono | Mono bass crossover, full narrowing, loudness-safe mono, phase check | side lows -13 / -25 dB, upper image untouched; Safe within 0.1 dB |
 | 21 | Hum | Constant-bandwidth notches at mains harmonics, auto 50/60 Hz | hum -15 / -22 / -31..-38 dB; clean guitar -0.2..-0.3 dB |
 | 22 | Pitch | Pitch-synchronous granular shifter: Drop / Detune / Octave | single notes: by-products 35-41 dB down; 0 st exact pass-through |
-| 23 | Slow | Auto volume swell, 50 ms - 2 s (Swell / Pad / Reverse) | identical swell on every note (one pick = one swell) |
+| 23 | Slow | Auto volume swell, 50 ms - 2 s (Swell / Pad / Reverse) | identical swell on every note (one pick = one swell); pick click hidden by 45-53 dB (6 ms lookahead) |
 
 Found while building these and fixed: a constant-Q notch design that ate
 1.3 dB of clean guitar (Hum), grain phase cancellation that turned the octave
 into sidebands (Pitch), and an onset detector that could double-trigger and
 then stop re-arming on low notes (Slow, Bloom).
+
+After listening tests: Slow sounded like a reverse delay. Its detector fired
+only after a pick had started, so the first few ms of every attack passed at
+full level and each note ended "swell, then click". It also missed most picks
+over strings that were still ringing (full-band level rose only 1.2-2x).
+Slow and Bloom now run 6 ms behind their detector (reported latency) and also
+detect the pick click above 4 kHz. Synthetic plucks at 120-800 ms spacing over
+ringing notes: Slow hides 25 of 26 attacks by 45-53 dB (the old detector caught 10, and
+let the click through on all of them); Bloom
+boosted new attacks by up to +6.8 dB and now leaves every one at 0.0 dB.
