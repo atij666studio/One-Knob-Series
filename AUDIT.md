@@ -81,3 +81,22 @@ Shared kit in `Shared/OneKnobUI.h`, used by all 11 editors (each editor is now
   a compressor with make-up, but worth knowing for gain staging).
 - **macOS/Linux** were not built locally; CI should be run on the branch.
 - Consider code signing (Windows SmartScreen / macOS Gatekeeper) for releases.
+
+## New plug-ins (Tier 1, built from the scaffolds)
+
+The five Tier 1 scaffolds were placeholder DSP (a few lines each, with
+`static` state shared across channels and instances). Each was designed and
+built properly on the series kit, moved into this workspace, and verified the
+same way as the original 11.
+
+| No. | Plug-in | What it does | Verified |
+|---|---|---|---|
+| 12 | Sag | Tube-rectifier supply sag: droop under hard picking, bloom on recovery (Rectifier / Variac / Bloom) | clean at 0 % (THD -127 dB), level within ±1 dB, zero latency |
+| 13 | Strum | Three-band strum shaper: low thump down, mid ring, high strike up (Clean / Crunch / Acoustic) | bands sum to the exact input (0 % = pass-through), level within ±0.2 dB |
+| 14 | Cohere | Dynamic bite/fizz tamer relative to the signal's own balance + glue + tape saturation | fizz spikes -5.3 dB vs -0.9 dB on normal playing, level within ±0.7 dB |
+| 15 | Reach | Presence + mud dip in the centre, mono lows, widened highs, mono-safe generated spread | mono amp → side up to -7.7 dB (corr 0.71), mono sum unchanged, level ±0.2 dB |
+| 16 | Room | 8-line FDN room reverb with ducking (Booth / Studio / Hall) | RT60 0.32 / 0.61 / 1.46 s, L/R decorrelated, duck -8 dB under playing |
+
+All five: harness stress suite pass, pluginval strictness 8 pass, Release
+VST3 + CLAP + Standalone build, installers, manuals (md + pdf). Tier 2 and
+Tier 3 folders are empty placeholders and were not started.
