@@ -921,6 +921,7 @@ namespace okui
         void timerCallback() override
         {
             activity.tick();
+            content.repaint (readoutArea);   // readouts can depend on other params (e.g. mode)
             onTick();
         }
 
