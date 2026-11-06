@@ -37,7 +37,9 @@ while IFS='|' read -r NAME DESC; do
     pkgbuild --analyze --root "$root" "$WORK/$id-$fid.plist" >/dev/null </dev/null
     n=$(/usr/libexec/PlistBuddy -c "Print" "$WORK/$id-$fid.plist" 2>/dev/null | grep -c "RootRelativeBundlePath" || true)
     for ((i = 0; i < n; i++)); do
-      /usr/libexec/PlistBuddy -c "Set :$i:BundleIsRelocatable false" "$WORK/$id-$fid.plist"
+      # The key isn't always present in the analyzed plist: set it, or add it.
+      /usr/libexec/PlistBuddy -c "Set :$i:BundleIsRelocatable false" "$WORK/$id-$fid.plist" 2>/dev/null ||
+        /usr/libexec/PlistBuddy -c "Add :$i:BundleIsRelocatable bool false" "$WORK/$id-$fid.plist"
     done
     pkgbuild --root "$root" --component-plist "$WORK/$id-$fid.plist" \
       --install-location "$loc" --identifier "$pkgid" --version "$VERSION" \
