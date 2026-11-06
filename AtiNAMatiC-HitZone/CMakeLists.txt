@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(AtiNAMatiCHitZone VERSION 0.2.0)
+project(AtiNAMatiCHitZone VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -53,11 +53,11 @@ FetchContent_MakeAvailable(clap-juce-extensions)
 # AtiNAMatiC-HitZone -- input level conditioner for NAM models.
 # ============================================================================
 if(APPLE)
-    set(_FORMATS Standalone VST3 AU)
+    set(_FORMATS VST3 AU LV2)
 elseif(LINUX)
     set(_FORMATS VST3 LV2)
 else()
-    set(_FORMATS Standalone VST3)
+    set(_FORMATS VST3 LV2)
 endif()
 
 juce_add_plugin(AtiNAMatiCHitZone

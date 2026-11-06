@@ -1,8 +1,17 @@
 # AtiNAMatiC-Double -- User Manual
 
-**Version 0.2.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+**Version 1.0.0** · ATIJ STUDIO · Windows · macOS · Linux · VST3 · CLAP · LV2 · AU (macOS) · Free and open source (GPL v3)
+
+![AtiNAMatiC-Double](AtiNAMatiC-Double.png)
 
 ---
+
+## What's new in v1.0.0
+
+- First public release, now **free and open source** (GPL v3).
+- New look, shared across the whole ONE KNOB Series.
+- **Every plug-in format:** VST3, CLAP and LV2 on Windows, macOS and Linux, plus AU on macOS. (The standalone app has been retired: these work best inside your DAW.)
+- New **ONE KNOB Series installers** for Windows and macOS: tick the plug-ins and formats you want, skip the rest. Linux gets an install script that asks the same questions.
 
 ## What's new in v0.2.0
 
@@ -101,7 +110,7 @@ Located below the mode picker, the STEREO IMAGE panel gives real-time visual fee
 | OS              | Windows 10 64-bit (or later)                |
 | CPU             | Any modern x64 processor                    |
 | RAM             | 64 MB per instance                          |
-| Plugin formats  | VST3, CLAP (DAW); Standalone (.exe)         |
+| Plugin formats  | VST3, CLAP, LV2, AU on macOS (DAW) |
 | Sample rates    | 44.1 / 48 / 88.2 / 96 / 176.4 / 192 kHz    |
 | Latency         | Zero samples (no lookahead)                 |
 | DAW             | Any VST3- or CLAP-compatible host           |
@@ -110,58 +119,37 @@ Located below the mode picker, the STEREO IMAGE panel gives real-time visual fee
 
 ## 6. Installation
 
-### Windows -- Installer (recommended)
+**Windows (64-bit)**
 
-1. Run **AtiNAMatiC-Double-Setup-0.2.0.exe**.
-2. Select the formats you want (Standalone, VST3, CLAP).
-3. Click Install.
-4. **Rescan plug-ins in your DAW** (see table below).
+- **Easiest:** run `ONE-KNOB-Series-v1.0.0-Windows-x64-Setup.exe`, tick the plug-ins and formats you want and untick the rest.
+- **Just this plug-in:** unzip `AtiNAMatiC-Double-v1.0.0-Windows-x64.zip` and copy:
 
-Default install paths:
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-Double.vst3` | `C:\Program Files\Common Files\VST3\` |
+| `AtiNAMatiC-Double.clap` | `C:\Program Files\Common Files\CLAP\` |
+| `AtiNAMatiC-Double.lv2` | `C:\Program Files\Common Files\LV2\` |
 
-| Format     | Location                                                                  |
-|------------|---------------------------------------------------------------------------|
-| Standalone | `C:\Program Files\Atij 666 Studio\AtiNAMatiC-Double\AtiNAMatiC-Double.exe` |
-| VST3       | `C:\Program Files\Common Files\VST3\AtiNAMatiC-Double.vst3`               |
-| CLAP       | `C:\Program Files\Common Files\CLAP\AtiNAMatiC-Double.clap`               |
+**macOS 10.15 or later (Apple Silicon and Intel)**
 
-### Windows -- Manual install
+- **Easiest:** open `ONE-KNOB-Series-v1.0.0-macOS-Installer.pkg`, click **Customize** and tick the plug-ins and formats you want.
+- **Just this plug-in:** unzip `AtiNAMatiC-Double-v1.0.0-macOS.zip` and copy:
 
-Copy the files from `Installer\Bundle\` to the paths above.
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-Double.vst3` | `/Library/Audio/Plug-Ins/VST3/` |
+| `AtiNAMatiC-Double.component` (AU) | `/Library/Audio/Plug-Ins/Components/` |
+| `AtiNAMatiC-Double.clap` | `/Library/Audio/Plug-Ins/CLAP/` |
+| `AtiNAMatiC-Double.lv2` | `/Library/Audio/Plug-Ins/LV2/` |
 
-### macOS -- Manual install
+The plug-ins aren't signed by Apple. If macOS blocks the installer, right-click it and choose **Open**. If you copied files from the zip, clear the quarantine flag in Terminal, e.g. `xattr -cr /Library/Audio/Plug-Ins/VST3/AtiNAMatiC-Double.vst3`.
 
-```
-Standalone:  /Applications/AtiNAMatiC-Double.app
-VST3:        ~/Library/Audio/Plug-Ins/VST3/AtiNAMatiC-Double.vst3
-AU:          ~/Library/Audio/Plug-Ins/Components/AtiNAMatiC-Double.component
-CLAP:        ~/Library/Audio/Plug-Ins/CLAP/AtiNAMatiC-Double.clap
-```
+**Linux (x86_64 and ARM64)**
 
-Build from source: `cmake -S . -B build && cmake --build build --config Release`
+- **Easiest:** extract `ONE-KNOB-Series-v1.0.0-Linux-x86_64.tar.gz` (or `-Linux-ARM64`) and run `./install.sh`. It asks which plug-ins and formats to install. Use `./install.sh --system` to install for all users.
+- **Just this plug-in:** unzip `AtiNAMatiC-Double-v1.0.0-Linux-x86_64.zip` (or `-Linux-ARM64`) and copy the `.vst3` folder to `~/.vst3/`, the `.clap` file to `~/.clap/` and the `.lv2` folder to `~/.lv2/`.
 
-### Linux -- Manual install
-
-```
-VST3:  ~/.vst3/AtiNAMatiC-Double.vst3
-CLAP:  ~/.clap/AtiNAMatiC-Double.clap
-```
-
-Build from source: `./build-linux.sh`
-
-### DAW rescan after install
-
-| DAW                | How to rescan                                              |
-|--------------------|------------------------------------------------------------|
-| Reaper             | Options > Preferences > VST > Re-scan                     |
-| Cubase / Nuendo    | Studio > VST Plug-in Manager > Update                      |
-| Studio One         | Options > Locations > VST Plug-ins > Reset Blacklist + Rescan |
-| Ableton Live       | Preferences > Plug-Ins > Rescan                            |
-| Bitwig Studio      | Settings > Plug-ins > Rescan plug-ins                      |
-| FL Studio          | Options > Manage plugins > Find more plugins               |
-| Logic Pro (macOS)  | Restart Logic; AU auto-validates on launch                 |
-
----
+Then rescan plug-ins in your DAW.
 
 ## 7. Controls reference
 

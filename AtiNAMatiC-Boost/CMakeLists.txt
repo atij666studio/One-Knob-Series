@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(AtiNAMatiCBoost VERSION 0.2.0)
+project(AtiNAMatiCBoost VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,13 +19,14 @@ if(APPLE)
     endif()
 endif()
 
-# JUCE native formats (CLAP is handled separately via clap-juce-extensions)
+# JUCE native formats (CLAP is handled separately via clap-juce-extensions).
+# Plug-ins only, no Standalone: VST3 + LV2 everywhere, plus AU on macOS.
 if(APPLE)
-    set(_FORMATS Standalone VST3 AU)
+    set(_FORMATS VST3 AU LV2)
 elseif(LINUX)
     set(_FORMATS VST3 LV2)
 else()
-    set(_FORMATS Standalone VST3)
+    set(_FORMATS VST3 LV2)
 endif()
 
 # Reuse the JUCE checkout that already lives in the AtiNAMatiC project.

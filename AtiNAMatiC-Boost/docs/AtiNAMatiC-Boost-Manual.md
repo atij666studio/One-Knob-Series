@@ -1,8 +1,17 @@
 # AtiNAMatiC-Boost — User Manual
-**Version 0.2.0**
+**Version 1.0.0** · ATIJ STUDIO · Windows · macOS · Linux · VST3 · CLAP · LV2 · AU (macOS) · Free and open source (GPL v3)
+
+![AtiNAMatiC-Boost](AtiNAMatiC-Boost.png)
 Atij 666 Studio — Designed & developed by Atij
 
 ---
+
+## What's new in v1.0.0
+
+- First public release, now **free and open source** (GPL v3).
+- New look, shared across the whole ONE KNOB Series.
+- **Every plug-in format:** VST3, CLAP and LV2 on Windows, macOS and Linux, plus AU on macOS. (The standalone app has been retired: these work best inside your DAW.)
+- New **ONE KNOB Series installers** for Windows and macOS: tick the plug-ins and formats you want, skip the rest. Linux gets an install script that asks the same questions.
 
 ## What's new in v0.2.0
 
@@ -28,70 +37,44 @@ Unlike a simple booster, it uses a three-stage soft-saturation engine with chara
 | **OS** | Windows 10 (64-bit) · macOS 10.15+ · Linux (Ubuntu 20.04+) |
 | **CPU** | Any modern 64-bit processor |
 | **RAM** | 256 MB |
-| **Formats** | Standalone · VST3 · CLAP · AU (macOS) |
+| **Formats** | VST3 · CLAP · LV2 · AU (macOS) |
 | **DAW** | Any VST3 or CLAP host |
 
 ---
 
 ## Installation
 
-### Windows — Using the Installer (Recommended)
-Run **AtiNAMatiC-Boost-v0.2.0-Setup.exe** and follow the on-screen steps.
+**Windows (64-bit)**
 
-The installer places files at:
-
-| Format | Location |
-|--------|----------|
-| Standalone | `C:\Program Files\Atij666Studio\AtiNAMatiC-Boost\` |
-| VST3 | `C:\Program Files\Common Files\VST3\` |
-| CLAP | `C:\Program Files\Common Files\CLAP\` |
-
-After installation, rescan plugins in your DAW.
-
-> **Antivirus notice:** Windows may show a SmartScreen or antivirus popup on first run because the binary is not yet widely known. The software is safe — click *More info → Run anyway* (SmartScreen) or *Allow* / *Trust* in your AV. This warning disappears as more users install the plugin and its reputation builds.
-
----
-
-### Windows — Manual Installation (No Installer)
-If you prefer not to use the installer, copy the files yourself — no extra files or dependencies are needed.
-
-**Step 1 — Copy your desired formats:**
+- **Easiest:** run `ONE-KNOB-Series-v1.0.0-Windows-x64-Setup.exe`, tick the plug-ins and formats you want and untick the rest.
+- **Just this plug-in:** unzip `AtiNAMatiC-Boost-v1.0.0-Windows-x64.zip` and copy:
 
 | File | Copy to |
-|------|---------|
-| `AtiNAMatiC-Boost.exe` | Anywhere (e.g. `C:\Program Files\Atij666Studio\AtiNAMatiC-Boost\`) |
-| `AtiNAMatiC-Boost.vst3` *(folder)* | `C:\Program Files\Common Files\VST3\` |
+|---|---|
+| `AtiNAMatiC-Boost.vst3` | `C:\Program Files\Common Files\VST3\` |
 | `AtiNAMatiC-Boost.clap` | `C:\Program Files\Common Files\CLAP\` |
+| `AtiNAMatiC-Boost.lv2` | `C:\Program Files\Common Files\LV2\` |
 
-> **Important:** The `.vst3` is a **folder**, not a single file. Copy the entire folder (including its `Contents\` subdirectory) into the VST3 directory.
+**macOS 10.15 or later (Apple Silicon and Intel)**
 
-**Step 2 — Rescan in your DAW**
-After copying, open your DAW and trigger a plugin rescan. The exact option varies by DAW:
-- **Reaper:** Options → Preferences → Plug-ins → VST → Re-scan
-- **Bitwig:** Settings → Plug-ins → Rescan
-- **Ableton Live:** Preferences → Plug-Ins → Rescan
-- **FL Studio:** Options → Manage plugins → Refresh
+- **Easiest:** open `ONE-KNOB-Series-v1.0.0-macOS-Installer.pkg`, click **Customize** and tick the plug-ins and formats you want.
+- **Just this plug-in:** unzip `AtiNAMatiC-Boost-v1.0.0-macOS.zip` and copy:
 
-**To uninstall manually:** delete the copied files from the paths above.
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-Boost.vst3` | `/Library/Audio/Plug-Ins/VST3/` |
+| `AtiNAMatiC-Boost.component` (AU) | `/Library/Audio/Plug-Ins/Components/` |
+| `AtiNAMatiC-Boost.clap` | `/Library/Audio/Plug-Ins/CLAP/` |
+| `AtiNAMatiC-Boost.lv2` | `/Library/Audio/Plug-Ins/LV2/` |
 
----
+The plug-ins aren't signed by Apple. If macOS blocks the installer, right-click it and choose **Open**. If you copied files from the zip, clear the quarantine flag in Terminal, e.g. `xattr -cr /Library/Audio/Plug-Ins/VST3/AtiNAMatiC-Boost.vst3`.
 
-### macOS
-Mount the **.dmg**, drag the components to the indicated folders, then rescan in your DAW.
+**Linux (x86_64 and ARM64)**
 
-| Format | Location |
-|--------|----------|
-| Standalone | `/Applications/` |
-| VST3 | `/Library/Audio/Plug-Ins/VST3/` |
-| AU | `/Library/Audio/Plug-Ins/Components/` |
-| CLAP | `/Library/Audio/Plug-Ins/CLAP/` |
+- **Easiest:** extract `ONE-KNOB-Series-v1.0.0-Linux-x86_64.tar.gz` (or `-Linux-ARM64`) and run `./install.sh`. It asks which plug-ins and formats to install. Use `./install.sh --system` to install for all users.
+- **Just this plug-in:** unzip `AtiNAMatiC-Boost-v1.0.0-Linux-x86_64.zip` (or `-Linux-ARM64`) and copy the `.vst3` folder to `~/.vst3/`, the `.clap` file to `~/.clap/` and the `.lv2` folder to `~/.lv2/`.
 
----
-
-### Linux
-Run `./build-linux.sh` from the project root. Plugins are installed to `~/.vst3/` and `~/.clap/`.
-
----
+Then rescan plug-ins in your DAW.
 
 ## Controls Reference
 
@@ -203,7 +186,7 @@ Use **BRIGHT** mode with **BOOST 60–80 %** and **MIX 60 %**. Keeps the dry att
 
 ## About
 
-**AtiNAMatiC-Boost v0.2.0**
+**AtiNAMatiC-Boost v1.0.0**
 Atij 666 Studio
 Designed & developed by Atij
 

@@ -1,8 +1,17 @@
 # AtiNAMatiC-HitZone — User Manual
 
-**Version 0.2.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+**Version 1.0.0** · ATIJ STUDIO · Windows · macOS · Linux · VST3 · CLAP · LV2 · AU (macOS) · Free and open source (GPL v3)
+
+![AtiNAMatiC-HitZone](AtiNAMatiC-HitZone.png)
 
 ---
+
+## What's new in v1.0.0
+
+- First public release, now **free and open source** (GPL v3).
+- New look, shared across the whole ONE KNOB Series.
+- **Every plug-in format:** VST3, CLAP and LV2 on Windows, macOS and Linux, plus AU on macOS. (The standalone app has been retired: these work best inside your DAW.)
+- New **ONE KNOB Series installers** for Windows and macOS: tick the plug-ins and formats you want, skip the rest. Linux gets an install script that asks the same questions.
 
 ## What's new in v0.2.0
 
@@ -173,70 +182,37 @@ The COLD and HOT labels at the left and right of the knob area indicate the tona
 
 ## 6. Installation
 
-### Windows — Installer (recommended)
+**Windows (64-bit)**
 
-1. Run **AtiNAMatiC-HitZone-Setup-0.2.0.exe**
-2. Choose the formats you want: **Standalone**, **VST3**, and/or **CLAP**
-3. Click Install
-4. After installation a dialog will remind you to rescan plug-ins in your DAW
-5. Rescan your DAW (see table below) and load HitZone from the plug-in browser
+- **Easiest:** run `ONE-KNOB-Series-v1.0.0-Windows-x64-Setup.exe`, tick the plug-ins and formats you want and untick the rest.
+- **Just this plug-in:** unzip `AtiNAMatiC-HitZone-v1.0.0-Windows-x64.zip` and copy:
 
-The installer places files at:
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-HitZone.vst3` | `C:\Program Files\Common Files\VST3\` |
+| `AtiNAMatiC-HitZone.clap` | `C:\Program Files\Common Files\CLAP\` |
+| `AtiNAMatiC-HitZone.lv2` | `C:\Program Files\Common Files\LV2\` |
 
-| Format | Location |
-|--------|----------|
-| Standalone | `C:\Program Files\Atij 666 Studio\AtiNAMatiC-HitZone\AtiNAMatiC-HitZone.exe` |
-| VST3 | `C:\Program Files\Common Files\VST3\AtiNAMatiC-HitZone.vst3\` |
-| CLAP | `C:\Program Files\Common Files\CLAP\AtiNAMatiC-HitZone.clap` |
+**macOS 10.15 or later (Apple Silicon and Intel)**
 
----
+- **Easiest:** open `ONE-KNOB-Series-v1.0.0-macOS-Installer.pkg`, click **Customize** and tick the plug-ins and formats you want.
+- **Just this plug-in:** unzip `AtiNAMatiC-HitZone-v1.0.0-macOS.zip` and copy:
 
-### Windows — Manual installation
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-HitZone.vst3` | `/Library/Audio/Plug-Ins/VST3/` |
+| `AtiNAMatiC-HitZone.component` (AU) | `/Library/Audio/Plug-Ins/Components/` |
+| `AtiNAMatiC-HitZone.clap` | `/Library/Audio/Plug-Ins/CLAP/` |
+| `AtiNAMatiC-HitZone.lv2` | `/Library/Audio/Plug-Ins/LV2/` |
 
-Copy the files from `Installer\Bundle\` to the locations above by hand, then rescan your DAW.
+The plug-ins aren't signed by Apple. If macOS blocks the installer, right-click it and choose **Open**. If you copied files from the zip, clear the quarantine flag in Terminal, e.g. `xattr -cr /Library/Audio/Plug-Ins/VST3/AtiNAMatiC-HitZone.vst3`.
 
----
+**Linux (x86_64 and ARM64)**
 
-### macOS — Manual installation
+- **Easiest:** extract `ONE-KNOB-Series-v1.0.0-Linux-x86_64.tar.gz` (or `-Linux-ARM64`) and run `./install.sh`. It asks which plug-ins and formats to install. Use `./install.sh --system` to install for all users.
+- **Just this plug-in:** unzip `AtiNAMatiC-HitZone-v1.0.0-Linux-x86_64.zip` (or `-Linux-ARM64`) and copy the `.vst3` folder to `~/.vst3/`, the `.clap` file to `~/.clap/` and the `.lv2` folder to `~/.lv2/`.
 
-Build from source (`build.sh` or CMake with Xcode), then install:
-
-| Format | Location |
-|--------|----------|
-| Standalone | `~/Applications/AtiNAMatiC-HitZone.app` |
-| VST3 | `~/Library/Audio/Plug-Ins/VST3/AtiNAMatiC-HitZone.vst3` |
-| AU | `~/Library/Audio/Plug-Ins/Components/AtiNAMatiC-HitZone.component` |
-| CLAP | `~/Library/Audio/Plug-Ins/CLAP/AtiNAMatiC-HitZone.clap` |
-
----
-
-### Linux — Manual installation
-
-Build with `build-linux.sh` (requires CMake + Ninja + a C++17 compiler), then install:
-
-| Format | Location |
-|--------|----------|
-| Standalone | `/usr/local/bin/AtiNAMatiC-HitZone` |
-| VST3 | `~/.vst3/AtiNAMatiC-HitZone.vst3/` |
-| CLAP | `~/.clap/AtiNAMatiC-HitZone.clap` |
-
----
-
-### DAW rescan after install
-
-| DAW | Where to rescan |
-|-----|----------------|
-| **Reaper** | Options → Preferences → Plug-ins → VST → Re-scan |
-| **Cubase / Nuendo** | Studio → VST Plug-in Manager → Update |
-| **Studio One** | Options → Locations → VST Plug-ins → Reset Blacklist → Rescan |
-| **Ableton Live** | Preferences → Plug-Ins → Rescan |
-| **Bitwig Studio** | Settings → Plug-ins → Rescan plug-in locations |
-| **FL Studio** | Options → Manage plug-ins → Start scan |
-| **Pro Tools (CLAP)** | n/a — CLAP not supported; use VST3 via a wrapper if available |
-
-In your DAW the plug-in appears under manufacturer **Atij666Studio**, category **Fx / Dynamics / Guitar**.
-
----
+Then rescan plug-ins in your DAW.
 
 ## 7. Controls reference
 

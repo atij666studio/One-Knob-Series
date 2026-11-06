@@ -1,8 +1,17 @@
 # AtiNAMatiC-Pick — User Manual
 
-**Version 0.2.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+**Version 1.0.0** · ATIJ STUDIO · Windows · macOS · Linux · VST3 · CLAP · LV2 · AU (macOS) · Free and open source (GPL v3)
+
+![AtiNAMatiC-Pick](AtiNAMatiC-Pick.png)
 
 ---
+
+## What's new in v1.0.0
+
+- First public release, now **free and open source** (GPL v3).
+- New look, shared across the whole ONE KNOB Series.
+- **Every plug-in format:** VST3, CLAP and LV2 on Windows, macOS and Linux, plus AU on macOS. (The standalone app has been retired: these work best inside your DAW.)
+- New **ONE KNOB Series installers** for Windows and macOS: tick the plug-ins and formats you want, skip the rest. Linux gets an install script that asks the same questions.
 
 ## What's new in v0.2.0
 
@@ -103,70 +112,44 @@ Dual horizontal meters at the bottom of the panel (−60 to 0 dBFS) show the inp
 | **OS** | Windows 10 (64-bit) · macOS 10.15+ · Linux (Ubuntu 20.04+) |
 | **CPU** | Any modern 64-bit processor (zero-latency, very light DSP) |
 | **RAM** | 256 MB |
-| **Formats** | Standalone · VST3 · CLAP · AU (macOS) |
+| **Formats** | VST3 · CLAP · LV2 · AU (macOS) |
 | **DAW** | Any VST3 or CLAP host |
 
 ---
 
 ## 5. Installation
 
-### Windows — Using the Installer (Recommended)
+**Windows (64-bit)**
 
-Run **AtiNAMatiC-Pick-v0.2.0-Setup.exe** and follow the on-screen steps.
-
-The installer places files at:
-
-| Format | Location |
-|--------|----------|
-| Standalone | `C:\Program Files\Atij 666 Studio\AtiNAMatiC-Pick\` |
-| VST3 | `C:\Program Files\Common Files\VST3\` |
-| CLAP | `C:\Program Files\Common Files\CLAP\` |
-
-After installation, rescan plugins in your DAW.
-
-> **Antivirus notice:** Windows may show a SmartScreen popup on first run because the binary is not yet widely known. The software is safe — click *More info → Run anyway*.
-
-### Windows — Manual Installation
-
-Copy the files directly:
+- **Easiest:** run `ONE-KNOB-Series-v1.0.0-Windows-x64-Setup.exe`, tick the plug-ins and formats you want and untick the rest.
+- **Just this plug-in:** unzip `AtiNAMatiC-Pick-v1.0.0-Windows-x64.zip` and copy:
 
 | File | Copy to |
-|------|---------|
-| `A-Pick.exe` | Anywhere (e.g. `C:\Program Files\Atij 666 Studio\AtiNAMatiC-Pick\`) |
-| `AtiNAMatiC-Pick.vst3` *(folder)* | `C:\Program Files\Common Files\VST3\` |
-| `AtiNAMatiC-Pick.clap` | `C:\Program Files\Common Files\CLAP\` |
-
-> The `.vst3` is a **folder**, not a single file. Copy the entire folder including its `Contents\` subdirectory.
-
-### macOS — Manual Installation
-
-| File | Copy to |
-|------|---------|
-| `AtiNAMatiC-Pick.vst3` | `/Library/Audio/Plug-Ins/VST3/` |
-| `AtiNAMatiC-Pick.component` | `/Library/Audio/Plug-Ins/Components/` |
-| `AtiNAMatiC-Pick.clap` | `/Library/Audio/Plug-Ins/CLAP/` |
-
-### Linux — Manual Installation
-
-| File | Copy to |
-|------|---------|
-| `AtiNAMatiC-Pick.vst3` | `~/.vst3/` |
-| `AtiNAMatiC-Pick.clap` | `~/.clap/` |
-
-### DAW Rescan Table
-
-| DAW | How to rescan |
 |---|---|
-| **Reaper** | Options → Preferences → Plug-ins → VST → *Re-scan* |
-| **Cubase / Nuendo** | Studio → VST Plug-in Manager → *Update* |
-| **Logic Pro** | Logic Pro → Settings → Plug-in Manager → *Reset & Rescan Selection* |
-| **Pro Tools** | Quits and relaunches automatically rescan AAX |
-| **FL Studio** | Options → Manage Plugins → *Find Plugins* |
-| **Ableton Live** | Preferences → Plug-Ins → *Rescan* |
-| **Studio One** | Studio One → Options → Locations → VST Plug-ins → *Reset Blocklist* + *Scan* |
-| **Bitwig** | Settings → Locations → Plug-in Locations → *Rescan* |
+| `AtiNAMatiC-Pick.vst3` | `C:\Program Files\Common Files\VST3\` |
+| `AtiNAMatiC-Pick.clap` | `C:\Program Files\Common Files\CLAP\` |
+| `AtiNAMatiC-Pick.lv2` | `C:\Program Files\Common Files\LV2\` |
 
----
+**macOS 10.15 or later (Apple Silicon and Intel)**
+
+- **Easiest:** open `ONE-KNOB-Series-v1.0.0-macOS-Installer.pkg`, click **Customize** and tick the plug-ins and formats you want.
+- **Just this plug-in:** unzip `AtiNAMatiC-Pick-v1.0.0-macOS.zip` and copy:
+
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-Pick.vst3` | `/Library/Audio/Plug-Ins/VST3/` |
+| `AtiNAMatiC-Pick.component` (AU) | `/Library/Audio/Plug-Ins/Components/` |
+| `AtiNAMatiC-Pick.clap` | `/Library/Audio/Plug-Ins/CLAP/` |
+| `AtiNAMatiC-Pick.lv2` | `/Library/Audio/Plug-Ins/LV2/` |
+
+The plug-ins aren't signed by Apple. If macOS blocks the installer, right-click it and choose **Open**. If you copied files from the zip, clear the quarantine flag in Terminal, e.g. `xattr -cr /Library/Audio/Plug-Ins/VST3/AtiNAMatiC-Pick.vst3`.
+
+**Linux (x86_64 and ARM64)**
+
+- **Easiest:** extract `ONE-KNOB-Series-v1.0.0-Linux-x86_64.tar.gz` (or `-Linux-ARM64`) and run `./install.sh`. It asks which plug-ins and formats to install. Use `./install.sh --system` to install for all users.
+- **Just this plug-in:** unzip `AtiNAMatiC-Pick-v1.0.0-Linux-x86_64.zip` (or `-Linux-ARM64`) and copy the `.vst3` folder to `~/.vst3/`, the `.clap` file to `~/.clap/` and the `.lv2` folder to `~/.lv2/`.
+
+Then rescan plug-ins in your DAW.
 
 ## 6. Controls Reference
 

@@ -7,3 +7,7 @@ build/
 build_log*.txt
 build_fixed.ps1
 full_build.log
+
+# Release build output (packaging/build-all.*)
+dist/
+build-release/

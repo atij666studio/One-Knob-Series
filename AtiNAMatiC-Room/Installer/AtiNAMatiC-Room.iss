@@ -7,7 +7,7 @@
 ; ============================================================================
 
 #define MyAppName        "AtiNAMatiC-Room"
-#define MyAppVersion     "0.2.0"
+#define MyAppVersion     "1.0.0"
 #define MyAppPublisher   "Atij 666 Studio"
 #define MyAppURL         "https://atij666studio.example"
 #define MyClapName       "AtiNAMatiC-Room.clap"

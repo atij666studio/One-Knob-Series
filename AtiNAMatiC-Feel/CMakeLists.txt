@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(AtiNAMatiCFeel VERSION 0.2.0)
+project(AtiNAMatiCFeel VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -19,11 +19,11 @@ endif()
 
 # Formats: Windows = Standalone + VST3; macOS adds AU; Linux = Standalone + VST3
 if(APPLE)
-    set(_FORMATS Standalone VST3 AU)
+    set(_FORMATS VST3 AU LV2)
 elseif(LINUX)
     set(_FORMATS VST3 LV2)
 else()
-    set(_FORMATS Standalone VST3)
+    set(_FORMATS VST3 LV2)
 endif()
 
 set(JUCE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../AtiNAMatiC/juce-vst3-bridge/JUCE"

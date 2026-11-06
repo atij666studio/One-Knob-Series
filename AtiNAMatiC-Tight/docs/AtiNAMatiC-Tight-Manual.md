@@ -1,8 +1,17 @@
 # AtiNAMatiC-Tight -- User Manual
 
-**Version 0.2.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+**Version 1.0.0** · ATIJ STUDIO · Windows · macOS · Linux · VST3 · CLAP · LV2 · AU (macOS) · Free and open source (GPL v3)
+
+![AtiNAMatiC-Tight](AtiNAMatiC-Tight.png)
 
 ---
+
+## What's new in v1.0.0
+
+- First public release, now **free and open source** (GPL v3).
+- New look, shared across the whole ONE KNOB Series.
+- **Every plug-in format:** VST3, CLAP and LV2 on Windows, macOS and Linux, plus AU on macOS. (The standalone app has been retired: these work best inside your DAW.)
+- New **ONE KNOB Series installers** for Windows and macOS: tick the plug-ins and formats you want, skip the rest. Linux gets an install script that asks the same questions.
 
 ## What's new in v0.2.0
 
@@ -104,46 +113,44 @@ The dB scale runs from -60 dB to 0 dB in 10 dB steps.
 | OS | Windows 10 64-bit or later |
 | CPU | Any modern 64-bit x86 processor |
 | RAM | 16 MB (plug-in itself; host requirements vary) |
-| Plugin format | VST3 or CLAP (DAW), or Standalone |
+| Plugin format | VST3 or CLAP, LV2 (DAW) |
 | Latency | 0 samples (no look-ahead) |
 
 ---
 
 ## 6. Installation
 
-### Windows Installer (recommended)
-1. Run `AtiNAMatiC-Tight-Setup-0.2.0.exe`.
-2. Select the formats you need (Standalone, VST3, CLAP) and follow the wizard.
-3. After installation completes, a message reminds you to rescan your DAW.
+**Windows (64-bit)**
 
-### Windows Manual
-- **VST3**: copy `AtiNAMatiC-Tight.vst3` folder to `C:\Program Files\Common Files\VST3\`
-- **CLAP**: copy `AtiNAMatiC-Tight.clap` to `C:\Program Files\Common Files\CLAP\`
-- **Standalone**: copy `AtiNAMatiC-Tight.exe` anywhere you like.
+- **Easiest:** run `ONE-KNOB-Series-v1.0.0-Windows-x64-Setup.exe`, tick the plug-ins and formats you want and untick the rest.
+- **Just this plug-in:** unzip `AtiNAMatiC-Tight-v1.0.0-Windows-x64.zip` and copy:
 
-### macOS Manual
-- **VST3**: copy to `~/Library/Audio/Plug-Ins/VST3/`
-- **AU**: copy to `~/Library/Audio/Plug-Ins/Components/`
-- **CLAP**: copy to `~/Library/Audio/Plug-Ins/CLAP/`
-- **Standalone**: copy to `/Applications/` or `~/Applications/`.
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-Tight.vst3` | `C:\Program Files\Common Files\VST3\` |
+| `AtiNAMatiC-Tight.clap` | `C:\Program Files\Common Files\CLAP\` |
+| `AtiNAMatiC-Tight.lv2` | `C:\Program Files\Common Files\LV2\` |
 
-### Linux Manual
-- **VST3**: copy to `~/.vst3/`
-- **CLAP**: copy to `~/.clap/`
-- **Standalone**: copy to any location and mark executable (`chmod +x`).
+**macOS 10.15 or later (Apple Silicon and Intel)**
 
-### DAW rescan after installation
+- **Easiest:** open `ONE-KNOB-Series-v1.0.0-macOS-Installer.pkg`, click **Customize** and tick the plug-ins and formats you want.
+- **Just this plug-in:** unzip `AtiNAMatiC-Tight-v1.0.0-macOS.zip` and copy:
 
-| DAW | Rescan path |
-|-----|------------|
-| Reaper | Options > Preferences > Plug-ins > VST > Re-scan |
-| Cubase | Studio > VST Plug-in Manager > Update |
-| Studio One | Options > Locations > Plug-ins > Rescan |
-| Ableton Live | Preferences > Plug-Ins > Rescan |
-| Bitwig Studio | Settings > Plug-ins > Rescan |
-| Pro Tools (CLAP) | See plug-in manager in your AAX wrapper |
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-Tight.vst3` | `/Library/Audio/Plug-Ins/VST3/` |
+| `AtiNAMatiC-Tight.component` (AU) | `/Library/Audio/Plug-Ins/Components/` |
+| `AtiNAMatiC-Tight.clap` | `/Library/Audio/Plug-Ins/CLAP/` |
+| `AtiNAMatiC-Tight.lv2` | `/Library/Audio/Plug-Ins/LV2/` |
 
----
+The plug-ins aren't signed by Apple. If macOS blocks the installer, right-click it and choose **Open**. If you copied files from the zip, clear the quarantine flag in Terminal, e.g. `xattr -cr /Library/Audio/Plug-Ins/VST3/AtiNAMatiC-Tight.vst3`.
+
+**Linux (x86_64 and ARM64)**
+
+- **Easiest:** extract `ONE-KNOB-Series-v1.0.0-Linux-x86_64.tar.gz` (or `-Linux-ARM64`) and run `./install.sh`. It asks which plug-ins and formats to install. Use `./install.sh --system` to install for all users.
+- **Just this plug-in:** unzip `AtiNAMatiC-Tight-v1.0.0-Linux-x86_64.zip` (or `-Linux-ARM64`) and copy the `.vst3` folder to `~/.vst3/`, the `.clap` file to `~/.clap/` and the `.lv2` folder to `~/.lv2/`.
+
+Then rescan plug-ins in your DAW.
 
 ## 7. Controls Reference
 

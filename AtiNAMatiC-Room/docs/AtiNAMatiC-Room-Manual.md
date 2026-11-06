@@ -1,8 +1,17 @@
 # AtiNAMatiC-Room — User Manual
 
-**Version 0.2.0** · Atij 666 Studio · Windows · macOS · Linux (VST3, CLAP, AU, LV2, Standalone)
+**Version 1.0.0** · ATIJ STUDIO · Windows · macOS · Linux · VST3 · CLAP · LV2 · AU (macOS) · Free and open source (GPL v3)
+
+![AtiNAMatiC-Room](AtiNAMatiC-Room.png)
 
 ---
+
+## What's new in v1.0.0
+
+- First public release, now **free and open source** (GPL v3).
+- New look, shared across the whole ONE KNOB Series.
+- **Every plug-in format:** VST3, CLAP and LV2 on Windows, macOS and Linux, plus AU on macOS. (The standalone app has been retired: these work best inside your DAW.)
+- New **ONE KNOB Series installers** for Windows and macOS: tick the plug-ins and formats you want, skip the rest. Linux gets an install script that asks the same questions.
 
 ## 1. What it is
 
@@ -65,7 +74,37 @@ Zero latency. Reports a 3 s tail so hosts let the reverb ring out. Moderate CPU 
 
 ## 7. Installation
 
-Windows: run **AtiNAMatiC-Room-Setup-0.2.0.exe**, then rescan plug-ins. Manual install: copy `AtiNAMatiC-Room.vst3` to `C:\Program Files\Common Files\VST3\` and `AtiNAMatiC-Room.clap` to `C:\Program Files\Common Files\CLAP\`.
+**Windows (64-bit)**
+
+- **Easiest:** run `ONE-KNOB-Series-v1.0.0-Windows-x64-Setup.exe`, tick the plug-ins and formats you want and untick the rest.
+- **Just this plug-in:** unzip `AtiNAMatiC-Room-v1.0.0-Windows-x64.zip` and copy:
+
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-Room.vst3` | `C:\Program Files\Common Files\VST3\` |
+| `AtiNAMatiC-Room.clap` | `C:\Program Files\Common Files\CLAP\` |
+| `AtiNAMatiC-Room.lv2` | `C:\Program Files\Common Files\LV2\` |
+
+**macOS 10.15 or later (Apple Silicon and Intel)**
+
+- **Easiest:** open `ONE-KNOB-Series-v1.0.0-macOS-Installer.pkg`, click **Customize** and tick the plug-ins and formats you want.
+- **Just this plug-in:** unzip `AtiNAMatiC-Room-v1.0.0-macOS.zip` and copy:
+
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-Room.vst3` | `/Library/Audio/Plug-Ins/VST3/` |
+| `AtiNAMatiC-Room.component` (AU) | `/Library/Audio/Plug-Ins/Components/` |
+| `AtiNAMatiC-Room.clap` | `/Library/Audio/Plug-Ins/CLAP/` |
+| `AtiNAMatiC-Room.lv2` | `/Library/Audio/Plug-Ins/LV2/` |
+
+The plug-ins aren't signed by Apple. If macOS blocks the installer, right-click it and choose **Open**. If you copied files from the zip, clear the quarantine flag in Terminal, e.g. `xattr -cr /Library/Audio/Plug-Ins/VST3/AtiNAMatiC-Room.vst3`.
+
+**Linux (x86_64 and ARM64)**
+
+- **Easiest:** extract `ONE-KNOB-Series-v1.0.0-Linux-x86_64.tar.gz` (or `-Linux-ARM64`) and run `./install.sh`. It asks which plug-ins and formats to install. Use `./install.sh --system` to install for all users.
+- **Just this plug-in:** unzip `AtiNAMatiC-Room-v1.0.0-Linux-x86_64.zip` (or `-Linux-ARM64`) and copy the `.vst3` folder to `~/.vst3/`, the `.clap` file to `~/.clap/` and the `.lv2` folder to `~/.lv2/`.
+
+Then rescan plug-ins in your DAW.
 
 ## 8. Tips
 
@@ -76,4 +115,4 @@ Windows: run **AtiNAMatiC-Room-Setup-0.2.0.exe**, then rescan plug-ins. Manual i
 
 ---
 
-*AtiNAMatiC-Room v0.2.0 · Atij 666 Studio*
+*AtiNAMatiC-Room v1.0.0 · Atij 666 Studio*

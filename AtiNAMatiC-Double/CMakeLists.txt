@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22)
 
-project(AtiNAMatiCDouble VERSION 0.2.0)
+project(AtiNAMatiCDouble VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -22,11 +22,11 @@ endif()
 
 # Formats: Windows = Standalone + VST3; macOS adds AU; Linux = Standalone + VST3
 if(APPLE)
-    set(_FORMATS Standalone VST3 AU)
+    set(_FORMATS VST3 AU LV2)
 elseif(LINUX)
     set(_FORMATS VST3 LV2)
 else()
-    set(_FORMATS Standalone VST3)
+    set(_FORMATS VST3 LV2)
 endif()
 
 # Reuse the JUCE checkout that already lives in the AtiNAMatiC project.

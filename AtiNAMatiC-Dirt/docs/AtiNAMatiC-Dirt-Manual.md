@@ -1,8 +1,17 @@
 # AtiNAMatiC-Dirt -- User Manual
 
-**Version 0.2.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+**Version 1.0.0** · ATIJ STUDIO · Windows · macOS · Linux · VST3 · CLAP · LV2 · AU (macOS) · Free and open source (GPL v3)
+
+![AtiNAMatiC-Dirt](AtiNAMatiC-Dirt.png)
 
 ---
+
+## What's new in v1.0.0
+
+- First public release, now **free and open source** (GPL v3).
+- New look, shared across the whole ONE KNOB Series.
+- **Every plug-in format:** VST3, CLAP and LV2 on Windows, macOS and Linux, plus AU on macOS. (The standalone app has been retired: these work best inside your DAW.)
+- New **ONE KNOB Series installers** for Windows and macOS: tick the plug-ins and formats you want, skip the rest. Linux gets an install script that asks the same questions.
 
 ## What's new in v0.2.0
 
@@ -81,7 +90,7 @@ A LED-style indicator that names the current saturation character:
 | OS | Windows 10 64-bit (or later) |
 | CPU | Any x64 processor (SSE2) |
 | RAM | 32 MB |
-| Formats | Standalone, VST3, CLAP |
+| Formats | VST3, CLAP, LV2 |
 | DAW | Any VST3 or CLAP host (Reaper, Ableton, FL Studio, Bitwig, etc.) |
 
 Linux builds (VST3 + CLAP) available via `build-linux.sh`.
@@ -90,85 +99,37 @@ Linux builds (VST3 + CLAP) available via `build-linux.sh`.
 
 ## 5. Installation
 
-### Windows -- Installer (recommended)
-1. Run `AtiNAMatiC-Dirt-Setup-0.2.0.exe` (requires administrator rights).
-2. Choose which formats to install:
-   - **Standalone** -- runs as a normal application, no DAW needed.
-   - **VST3** -- installs to `C:\Program Files\Common Files\VST3\`.
-   - **CLAP** -- installs to `C:\Program Files\Common Files\CLAP\`.
-3. Click Install, then rescan plug-ins in your DAW (see DAW Rescan section below).
+**Windows (64-bit)**
 
-### Windows -- Manual install
-Copy the files from `Installer\Bundle\` to the correct folders:
+- **Easiest:** run `ONE-KNOB-Series-v1.0.0-Windows-x64-Setup.exe`, tick the plug-ins and formats you want and untick the rest.
+- **Just this plug-in:** unzip `AtiNAMatiC-Dirt-v1.0.0-Windows-x64.zip` and copy:
 
-| Format     | Source file                    | Destination folder                                    |
-|------------|-------------------------------|-------------------------------------------------------|
-| Standalone | `AtiNAMatiC-Dirt.exe`          | Anywhere you like (e.g. `C:\Program Files\Atij666Studio\`) |
-| VST3       | `AtiNAMatiC-Dirt.vst3\` (folder) | `C:\Program Files\Common Files\VST3\`              |
-| CLAP       | `AtiNAMatiC-Dirt.clap`         | `C:\Program Files\Common Files\CLAP\`               |
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-Dirt.vst3` | `C:\Program Files\Common Files\VST3\` |
+| `AtiNAMatiC-Dirt.clap` | `C:\Program Files\Common Files\CLAP\` |
+| `AtiNAMatiC-Dirt.lv2` | `C:\Program Files\Common Files\LV2\` |
 
-> **Note:** Copying VST3 requires administrator rights. Right-click the terminal / Explorer and choose **Run as administrator** if prompted.
+**macOS 10.15 or later (Apple Silicon and Intel)**
 
-PowerShell one-liners (run as Administrator):
-```powershell
-# VST3
-Copy-Item -Recurse -Force ".\Installer\Bundle\AtiNAMatiC-Dirt.vst3" "$env:CommonProgramFiles\VST3\"
+- **Easiest:** open `ONE-KNOB-Series-v1.0.0-macOS-Installer.pkg`, click **Customize** and tick the plug-ins and formats you want.
+- **Just this plug-in:** unzip `AtiNAMatiC-Dirt-v1.0.0-macOS.zip` and copy:
 
-# CLAP
-Copy-Item -Force ".\Installer\Bundle\AtiNAMatiC-Dirt.clap" "$env:CommonProgramFiles\CLAP\"
-```
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-Dirt.vst3` | `/Library/Audio/Plug-Ins/VST3/` |
+| `AtiNAMatiC-Dirt.component` (AU) | `/Library/Audio/Plug-Ins/Components/` |
+| `AtiNAMatiC-Dirt.clap` | `/Library/Audio/Plug-Ins/CLAP/` |
+| `AtiNAMatiC-Dirt.lv2` | `/Library/Audio/Plug-Ins/LV2/` |
 
-### macOS -- Manual install
-> macOS builds require compiling from source. Run `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release` then `cmake --build build --config Release`.
+The plug-ins aren't signed by Apple. If macOS blocks the installer, right-click it and choose **Open**. If you copied files from the zip, clear the quarantine flag in Terminal, e.g. `xattr -cr /Library/Audio/Plug-Ins/VST3/AtiNAMatiC-Dirt.vst3`.
 
-| Format     | Destination                                           |
-|------------|-------------------------------------------------------|
-| Standalone | `/Applications/` or anywhere in your Applications     |
-| VST3       | `/Library/Audio/Plug-Ins/VST3/` (system) or `~/Library/Audio/Plug-Ins/VST3/` (user) |
-| AU         | `/Library/Audio/Plug-Ins/Components/` (system) or `~/Library/Audio/Plug-Ins/Components/` (user) |
-| CLAP       | `/Library/Audio/Plug-Ins/CLAP/` (system) or `~/Library/Audio/Plug-Ins/CLAP/` (user) |
+**Linux (x86_64 and ARM64)**
 
-Terminal commands (user install, no sudo required):
-```bash
-cp -r build/AtiNAMatiCDirt_artefacts/Release/VST3/AtiNAMatiC-Dirt.vst3 \
-    ~/Library/Audio/Plug-Ins/VST3/
-cp -r build/AtiNAMatiCDirt_artefacts/Release/AU/AtiNAMatiC-Dirt.component \
-    ~/Library/Audio/Plug-Ins/Components/
-cp build/AtiNAMatiCDirt_artefacts/Release/CLAP/AtiNAMatiC-Dirt.clap \
-    ~/Library/Audio/Plug-Ins/CLAP/
-```
+- **Easiest:** extract `ONE-KNOB-Series-v1.0.0-Linux-x86_64.tar.gz` (or `-Linux-ARM64`) and run `./install.sh`. It asks which plug-ins and formats to install. Use `./install.sh --system` to install for all users.
+- **Just this plug-in:** unzip `AtiNAMatiC-Dirt-v1.0.0-Linux-x86_64.zip` (or `-Linux-ARM64`) and copy the `.vst3` folder to `~/.vst3/`, the `.clap` file to `~/.clap/` and the `.lv2` folder to `~/.lv2/`.
 
-### Linux -- Manual install
-Build from source:
-```bash
-./build-linux.sh
-```
-Then install:
-```bash
-# Per-user (no sudo required)
-mkdir -p ~/.vst3 ~/.clap
-cp -r build-linux/AtiNAMatiCDirt_artefacts/Release/VST3/AtiNAMatiC-Dirt.vst3 ~/.vst3/
-cp  build-linux/AtiNAMatiCDirt_artefacts/Release/CLAP/AtiNAMatiC-Dirt.clap  ~/.clap/
-
-# System-wide (requires sudo)
-sudo cp -r build-linux/AtiNAMatiCDirt_artefacts/Release/VST3/AtiNAMatiC-Dirt.vst3 /usr/lib/vst3/
-sudo cp  build-linux/AtiNAMatiCDirt_artefacts/Release/CLAP/AtiNAMatiC-Dirt.clap  /usr/lib/clap/
-```
-
-### DAW rescan (after manual install)
-After copying files manually, tell your DAW to find the new plug-in:
-
-| DAW        | Where to rescan                                                          |
-|------------|--------------------------------------------------------------------------|
-| Reaper     | Options > Preferences > Plug-ins > VST > **Re-scan** (or Clear cache and re-scan) |
-| Ableton    | Options > Plug-in Source Preferences > **Rescan**                        |
-| FL Studio  | Options > Manage Plug-ins > **Start scan**                               |
-| Bitwig     | Settings > Plug-ins > **Rescan plug-ins**                                |
-| Cubase     | Studio > Studio Setup > VST Plug-in Manager > **Update**                 |
-| Logic Pro  | Plug-in Manager > **Reset & Rescan** (AU only)                           |
-| CLAP hosts | Most hosts auto-detect on next launch; check host preferences if not     |
-
----
+Then rescan plug-ins in your DAW.
 
 ## 6. Controls Reference (Quick Summary)
 

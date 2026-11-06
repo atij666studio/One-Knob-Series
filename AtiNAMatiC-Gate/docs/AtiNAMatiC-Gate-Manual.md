@@ -1,8 +1,17 @@
 # AtiNAMatiC-Gate -- User Manual
 
-**Version 0.2.0** · Atij 666 Studio · Windows (Standalone, VST3 & CLAP)
+**Version 1.0.0** · ATIJ STUDIO · Windows · macOS · Linux · VST3 · CLAP · LV2 · AU (macOS) · Free and open source (GPL v3)
+
+![AtiNAMatiC-Gate](AtiNAMatiC-Gate.png)
 
 ---
+
+## What's new in v1.0.0
+
+- First public release, now **free and open source** (GPL v3).
+- New look, shared across the whole ONE KNOB Series.
+- **Every plug-in format:** VST3, CLAP and LV2 on Windows, macOS and Linux, plus AU on macOS. (The standalone app has been retired: these work best inside your DAW.)
+- New **ONE KNOB Series installers** for Windows and macOS: tick the plug-ins and formats you want, skip the rest. Linux gets an install script that asks the same questions.
 
 ## What's new in v0.2.0
 
@@ -131,7 +140,7 @@ At 44.1 kHz the lookahead is 132 samples. At 48 kHz it is 144 samples. At 96 kHz
 | | Windows | macOS | Linux |
 |--|---------|-------|-------|
 | **OS** | Windows 10 / 11 (64-bit) | macOS 10.15 Catalina or later | Ubuntu 20.04+ / equivalent |
-| **Formats** | Standalone, VST3, CLAP | Standalone, VST3, AU, CLAP | Standalone, VST3, CLAP |
+| **Formats** | VST3, CLAP, LV2 | VST3, AU, CLAP, LV2 | VST3, CLAP, LV2 |
 | **CPU** | x86-64 | Apple Silicon (arm64) or Intel x86-64 | x86-64 |
 | **RAM** | 4 GB minimum | 4 GB minimum | 4 GB minimum |
 | **Sample rates** | 44.1 -- 192 kHz | 44.1 -- 192 kHz | 44.1 -- 192 kHz |
@@ -140,57 +149,37 @@ At 44.1 kHz the lookahead is 132 samples. At 48 kHz it is 144 samples. At 96 kHz
 
 ## 7. Installation
 
-### Windows -- using the installer
+**Windows (64-bit)**
 
-1. Run **AtiNAMatiC-Gate-Setup-0.2.0.exe** as Administrator.
-2. Select the formats to install (Standalone is always included):
-   - **VST3 plug-in** installs to `C:\Program Files\Common Files\VST3\AtiNAMatiC-Gate.vst3`
-   - **CLAP plug-in** installs to `C:\Program Files\Common Files\CLAP\AtiNAMatiC-Gate.clap`
-3. Click Install. When complete, a dialog will remind you to rescan plug-ins in your DAW.
-4. Rescan (see table below).
+- **Easiest:** run `ONE-KNOB-Series-v1.0.0-Windows-x64-Setup.exe`, tick the plug-ins and formats you want and untick the rest.
+- **Just this plug-in:** unzip `AtiNAMatiC-Gate-v1.0.0-Windows-x64.zip` and copy:
 
-### Windows -- manual installation
-
-Copy the files to their locations manually:
-
-| File | Destination |
-|------|-------------|
-| `AtiNAMatiC-Gate.exe` | Anywhere you like (e.g. `C:\Program Files\Atij 666 Studio\AtiNAMatiC-Gate\`) |
-| `AtiNAMatiC-Gate.vst3` (folder) | `C:\Program Files\Common Files\VST3\` |
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-Gate.vst3` | `C:\Program Files\Common Files\VST3\` |
 | `AtiNAMatiC-Gate.clap` | `C:\Program Files\Common Files\CLAP\` |
+| `AtiNAMatiC-Gate.lv2` | `C:\Program Files\Common Files\LV2\` |
 
-### macOS -- manual installation
+**macOS 10.15 or later (Apple Silicon and Intel)**
 
-| File | Destination |
-|------|-------------|
+- **Easiest:** open `ONE-KNOB-Series-v1.0.0-macOS-Installer.pkg`, click **Customize** and tick the plug-ins and formats you want.
+- **Just this plug-in:** unzip `AtiNAMatiC-Gate-v1.0.0-macOS.zip` and copy:
+
+| File | Copy to |
+|---|---|
 | `AtiNAMatiC-Gate.vst3` | `/Library/Audio/Plug-Ins/VST3/` |
 | `AtiNAMatiC-Gate.component` (AU) | `/Library/Audio/Plug-Ins/Components/` |
 | `AtiNAMatiC-Gate.clap` | `/Library/Audio/Plug-Ins/CLAP/` |
+| `AtiNAMatiC-Gate.lv2` | `/Library/Audio/Plug-Ins/LV2/` |
 
-On Apple Silicon, open **Audio MIDI Setup** to confirm the plug-in shows as arm64 (not Rosetta).
+The plug-ins aren't signed by Apple. If macOS blocks the installer, right-click it and choose **Open**. If you copied files from the zip, clear the quarantine flag in Terminal, e.g. `xattr -cr /Library/Audio/Plug-Ins/VST3/AtiNAMatiC-Gate.vst3`.
 
-### Linux -- manual installation
+**Linux (x86_64 and ARM64)**
 
-| File | Destination |
-|------|-------------|
-| `AtiNAMatiC-Gate.vst3` (folder) | `~/.vst3/` or `/usr/lib/vst3/` |
-| `AtiNAMatiC-Gate.clap` | `~/.clap/` or `/usr/lib/clap/` |
+- **Easiest:** extract `ONE-KNOB-Series-v1.0.0-Linux-x86_64.tar.gz` (or `-Linux-ARM64`) and run `./install.sh`. It asks which plug-ins and formats to install. Use `./install.sh --system` to install for all users.
+- **Just this plug-in:** unzip `AtiNAMatiC-Gate-v1.0.0-Linux-x86_64.zip` (or `-Linux-ARM64`) and copy the `.vst3` folder to `~/.vst3/`, the `.clap` file to `~/.clap/` and the `.lv2` folder to `~/.lv2/`.
 
-### DAW rescan
-
-| DAW | Rescan command |
-|-----|----------------|
-| **Reaper** | Options > Preferences > Plug-ins > VST > Re-scan |
-| **Cubase / Nuendo** | Studio > VST Plug-in Manager > Update |
-| **Studio One** | Options > Locations > Plug-ins > Rescan |
-| **Ableton Live** | Preferences > Plug-Ins > Rescan |
-| **Bitwig Studio** | Settings > Plug-ins > Rescan |
-| **FL Studio** | Options > Manage plug-ins > Start scan |
-| **Logic Pro (AU)** | Audio MIDI Setup -- plug-ins validate automatically on launch |
-
-The plug-in appears under manufacturer **Atij666Studio**, category **Dynamics / Gate**.
-
----
+Then rescan plug-ins in your DAW.
 
 ## 8. Controls reference
 

@@ -1,7 +1,16 @@
 # AtiNAMatiC-Level — User Manual
-**Version 0.2.0**  |  Atij 666 Studio
+**Version 1.0.0** · ATIJ STUDIO · Windows · macOS · Linux · VST3 · CLAP · LV2 · AU (macOS) · Free and open source (GPL v3)
+
+![AtiNAMatiC-Level](AtiNAMatiC-Level.png)
 
 ---
+
+## What's new in v1.0.0
+
+- First public release, now **free and open source** (GPL v3).
+- New look, shared across the whole ONE KNOB Series.
+- **Every plug-in format:** VST3, CLAP and LV2 on Windows, macOS and Linux, plus AU on macOS. (The standalone app has been retired: these work best inside your DAW.)
+- New **ONE KNOB Series installers** for Windows and macOS: tick the plug-ins and formats you want, skip the rest. Linux gets an install script that asks the same questions.
 
 ## What's new in v0.2.0
 
@@ -97,49 +106,43 @@ The LED dot glows brighter as correction increases.
 | **CPU** | Any modern x64 processor |
 | **RAM** | 4 GB |
 | **DAW** | Any VST3 or CLAP host |
-| **Formats** | Standalone, VST3, CLAP (Windows/Linux); + AU (macOS) |
+| **Formats** | VST3, CLAP, LV2 (Windows/Linux); + AU (macOS) |
 
 ---
 
 ## Installation
 
-### Windows — Installer
+**Windows (64-bit)**
 
-1. Run **AtiNAMatiC-Level-v0.2.0-Setup.exe**.
-2. Select the formats you want (VST3, CLAP, Standalone).
-3. Complete the wizard.
-4. Rescan your DAW for new plugins (see table below).
+- **Easiest:** run `ONE-KNOB-Series-v1.0.0-Windows-x64-Setup.exe`, tick the plug-ins and formats you want and untick the rest.
+- **Just this plug-in:** unzip `AtiNAMatiC-Level-v1.0.0-Windows-x64.zip` and copy:
 
-### Windows — Manual
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-Level.vst3` | `C:\Program Files\Common Files\VST3\` |
+| `AtiNAMatiC-Level.clap` | `C:\Program Files\Common Files\CLAP\` |
+| `AtiNAMatiC-Level.lv2` | `C:\Program Files\Common Files\LV2\` |
 
-1. Copy `AtiNAMatiC-Level.vst3` → `C:\Program Files\Common Files\VST3\`
-2. Copy `AtiNAMatiC-Level.clap` → `C:\Program Files\Common Files\CLAP\`
-3. Rescan your DAW.
+**macOS 10.15 or later (Apple Silicon and Intel)**
 
-### macOS — Manual
+- **Easiest:** open `ONE-KNOB-Series-v1.0.0-macOS-Installer.pkg`, click **Customize** and tick the plug-ins and formats you want.
+- **Just this plug-in:** unzip `AtiNAMatiC-Level-v1.0.0-macOS.zip` and copy:
 
-1. Copy `AtiNAMatiC-Level.vst3` → `/Library/Audio/Plug-Ins/VST3/`
-2. Copy `AtiNAMatiC-Level.component` → `/Library/Audio/Plug-Ins/Components/` (AU)
-3. Rescan your DAW.
+| File | Copy to |
+|---|---|
+| `AtiNAMatiC-Level.vst3` | `/Library/Audio/Plug-Ins/VST3/` |
+| `AtiNAMatiC-Level.component` (AU) | `/Library/Audio/Plug-Ins/Components/` |
+| `AtiNAMatiC-Level.clap` | `/Library/Audio/Plug-Ins/CLAP/` |
+| `AtiNAMatiC-Level.lv2` | `/Library/Audio/Plug-Ins/LV2/` |
 
-### Linux — Manual
+The plug-ins aren't signed by Apple. If macOS blocks the installer, right-click it and choose **Open**. If you copied files from the zip, clear the quarantine flag in Terminal, e.g. `xattr -cr /Library/Audio/Plug-Ins/VST3/AtiNAMatiC-Level.vst3`.
 
-1. Copy `AtiNAMatiC-Level.vst3` → `~/.vst3/` (per-user) or `/usr/lib/vst3/` (system)
-2. Copy `AtiNAMatiC-Level.clap` → `~/.clap/` (per-user) or `/usr/lib/clap/` (system)
-3. Rescan your DAW.
+**Linux (x86_64 and ARM64)**
 
-### DAW Rescan
+- **Easiest:** extract `ONE-KNOB-Series-v1.0.0-Linux-x86_64.tar.gz` (or `-Linux-ARM64`) and run `./install.sh`. It asks which plug-ins and formats to install. Use `./install.sh --system` to install for all users.
+- **Just this plug-in:** unzip `AtiNAMatiC-Level-v1.0.0-Linux-x86_64.zip` (or `-Linux-ARM64`) and copy the `.vst3` folder to `~/.vst3/`, the `.clap` file to `~/.clap/` and the `.lv2` folder to `~/.lv2/`.
 
-| DAW | Where to rescan |
-|-----|----------------|
-| Reaper | Options > Preferences > Plug-ins > VST > Re-scan |
-| Ableton Live | Preferences > Plug-ins > Rescan |
-| Cubase / Nuendo | Studio > VST Plug-in Manager > Update |
-| Bitwig Studio | Settings > Plug-ins > Rescan plug-in locations |
-| Studio One | Options > Locations > VST Plug-ins > Scan |
-| Logic Pro | Restart Logic — AU plug-ins are rescanned automatically |
-
----
+Then rescan plug-ins in your DAW.
 
 ## Controls Reference
 

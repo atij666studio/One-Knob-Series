@@ -1,0 +1,24 @@
+# ONE KNOB Series plug-ins: Name|Short description (used by the build scripts and installers)
+Air|Amp-in-the-room air, depth and speaker feel
+Bloom|Notes swell and sing as they sustain
+Boost|Life, punch and clarity into any NAM amp
+Cab|One-knob speaker cabinet with mic position
+Choke|Shortens note ring-out for tight stops
+Cohere|Tames amp-sim harshness and glues the guitar together
+Dirt|Character drive — attitude without full distortion
+Double|Studio-grade double tracking in one knob
+Feel|Feel enhancer — make everything you play sound better
+Gate|Intelligent, musical gate for high-gain guitar
+HitZone|Always hit the perfect level for NAM
+Hum|Removes mains hum and buzz, auto 50/60 Hz
+Level|Auto output leveler — keeps volume consistent
+Mono|Mono bass, narrow or collapse the stereo image safely
+Pick|Change how your picking feels — without changing your tone
+Pitch|Drop tuning, detune and octave in one knob
+Reach|Projection and mono-safe stereo spread for amp sims
+Room|Ducking room ambience that stays out of the way
+Sag|Power-supply sag, bloom and touch response
+Slow|Auto volume swells on every note
+Squash|One-knob bus and mix compressor
+Strum|Three-band strum shaper: string clarity without boom
+Tight|Instant modern tightness for any tone
