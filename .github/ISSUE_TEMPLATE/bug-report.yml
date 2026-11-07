@@ -1,0 +1,74 @@
+name: Report a bug
+description: Something in One Knob Series doesn't work or crashes
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report this. The more detail you give, the faster it can be fixed.
+        Please don't include personal information: this page is public.
+  - type: input
+    id: plugin
+    attributes:
+      label: Which plug-in?
+      placeholder: e.g. Boost, Gate, Air
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Shown in the app's About/info panel or the file name you downloaded.
+      placeholder: e.g. v1.2.7
+    validations:
+      required: true
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows 10/11
+        - macOS (Apple Silicon)
+        - macOS (Intel)
+        - Linux x86_64
+        - Linux ARM64 (e.g. Raspberry Pi)
+    validations:
+      required: true
+  - type: dropdown
+    id: format
+    attributes:
+      label: Format
+      multiple: true
+      options:
+        - VST3
+        - CLAP
+        - LV2
+        - AU
+    validations:
+      required: true
+  - type: input
+    id: host
+    attributes:
+      label: DAW / host (if a plug-in)
+      placeholder: e.g. Reaper 7.2, Ableton Live 12, Logic Pro 11
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: And what did you expect to happen instead?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open ...
+        2. Load ...
+        3. Turn ...
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots, crash logs or audio interface details help. Drag files in here.
