@@ -1,0 +1,25 @@
+name: Feedback or idea
+description: Suggest a feature, improvement or share what you think of One Knob Series
+title: "[Feedback] "
+labels: ["feedback"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ideas, wishes and honest opinions are all welcome. Please don't include personal information: this page is public.
+  - type: textarea
+    id: feedback
+    attributes:
+      label: Your feedback or idea
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: How would it help you?
+      description: Optional. What are you trying to do, and what gets in the way?
+  - type: input
+    id: version
+    attributes:
+      label: Version and system (optional)
+      placeholder: e.g. v1.2.7 on Windows 11, VST3 in Reaper
